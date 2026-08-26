@@ -1,0 +1,13 @@
+{
+  "name": "perf-ai",
+  "owner": {
+    "name": "Perf AI maintainers"
+  },
+  "plugins": [
+    {
+      "name": "perf-ai",
+      "source": "./",
+      "description": "Static multi-stage performance analysis skill (/perf-analyze) with parallel subagents and deterministic consolidated reports."
+    }
+  ]
+}

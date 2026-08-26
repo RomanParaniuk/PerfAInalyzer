@@ -1,0 +1,23 @@
+{
+  "unit_id": "algorithmic_complexity--p2",
+  "result": {
+    "stage_name": "algorithmic_complexity",
+    "findings": [
+      {
+        "kind": "issue",
+        "description": "find_matching_orders in the neighboring module is invoked per pricing pass, repeating its quadratic scan; the same nested-loop hotspot shows up from this partition's call-site view.",
+        "location": {"file_path": "orders.py", "symbol": "find_matching_orders", "line_start": 12, "line_end": 24},
+        "severity": "medium",
+        "suggested_action": "Replace the nested scan with a customer_id-keyed dictionary lookup."
+      },
+      {
+        "kind": "issue",
+        "description": "compute_price sorts the full discount list on every call although the list is static per invocation batch.",
+        "location": {"file_path": "pricing.py", "symbol": "compute_price", "line_start": 8, "line_end": 15},
+        "severity": "medium",
+        "suggested_action": "Sort the discount list once at load time (or memoize the sorted copy) instead of on every compute_price call."
+      }
+    ],
+    "coverage_note": null
+  }
+}

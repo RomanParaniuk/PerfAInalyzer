@@ -1,0 +1,16 @@
+{
+  "unit_id": "concurrency_scalability--p1",
+  "result": {
+    "stage_name": "resource_io_efficiency",
+    "findings": [
+      {
+        "kind": "issue",
+        "description": "This payload declares the wrong stage on purpose: the unit is concurrency_scalability but the result claims resource_io_efficiency.",
+        "location": {"file_path": "orders.py", "symbol": null, "line_start": 1, "line_end": null},
+        "severity": "low",
+        "suggested_action": "Reject this file at render time; the wrong-stage check must fail the unit."
+      }
+    ],
+    "coverage_note": null
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "unit_id": "algorithmic_complexity--p1",
+  "result": {
+    "stage_name": "algorithmic_complexity",
+    "findings": [
+      {
+        "kind": "issue",
+        "description": "find_matching_orders compares every order against every other order in a nested loop, giving O(n^2) growth as the order list grows.",
+        "location": {"file_path": "orders.py", "symbol": "find_matching_orders", "line_start": 12, "line_end": 24},
+        "severity": "high",
+        "suggested_action": "Index orders by customer_id in a dict before the loop and look up matches in O(1) per order, reducing the pass to O(n) overall."
+      },
+      {
+        "kind": "issue",
+        "description": "apply_discounts recomputes the full discount table for every order item even though the table depends only on the order's tier.",
+        "location": {"file_path": "orders.py", "symbol": "apply_discounts", "line_start": 30, "line_end": 41},
+        "severity": "medium",
+        "suggested_action": "Hoist the discount-table computation out of the per-item loop and cache it per tier for the duration of the call."
+      }
+    ],
+    "coverage_note": null
+  }
+}

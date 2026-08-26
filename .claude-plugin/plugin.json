@@ -1,0 +1,8 @@
+{
+  "name": "perf-ai",
+  "version": "0.1.0",
+  "description": "Four-stage static performance analysis of a codebase (/perf-analyze), executed with the invoking agent's own model access — no hosted API key. Deterministic steps run the bundled pipeline code; reports are identical in structure to the hosted-CLI path.",
+  "author": {
+    "name": "Perf AI maintainers"
+  }
+}

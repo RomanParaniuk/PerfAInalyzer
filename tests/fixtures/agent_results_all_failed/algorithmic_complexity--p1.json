@@ -1,0 +1,8 @@
+{
+  "unit_id": "some_other_unit--p9",
+  "result": {
+    "stage_name": "algorithmic_complexity",
+    "findings": [],
+    "coverage_note": "unit_id does not match the filename stem, so this unit must be rejected"
+  }
+}

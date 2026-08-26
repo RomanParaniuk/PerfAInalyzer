@@ -1,0 +1,23 @@
+{
+  "unit_id": "resource_io_efficiency--p2",
+  "result": {
+    "stage_name": "resource_io_efficiency",
+    "findings": [
+      {
+        "kind": "issue",
+        "description": "compute_price builds a fresh list of every discount rule on each call, allocating the same immutable data repeatedly in a hot path.",
+        "location": {"file_path": "pricing.py", "symbol": "compute_price", "line_start": 8, "line_end": 15},
+        "severity": "low",
+        "suggested_action": "Move the discount-rule list to a module-level constant so each call reuses one allocation."
+      },
+      {
+        "kind": "valuable_finding",
+        "description": "pricing.py performs no file or network I/O; all pricing work is CPU-bound, so batching or async I/O would bring no benefit here.",
+        "location": {"file_path": "pricing.py", "symbol": null, "line_start": 1, "line_end": null},
+        "severity": null,
+        "suggested_action": null
+      }
+    ],
+    "coverage_note": null
+  }
+}

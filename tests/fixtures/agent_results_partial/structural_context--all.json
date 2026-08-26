@@ -1,0 +1,16 @@
+{
+  "unit_id": "structural_context--all",
+  "result": {
+    "stage_name": "structural_context",
+    "findings": [
+      {
+        "kind": "valuable_finding",
+        "description": "The scope is a two-module order/pricing pair: orders.py drives order lookups and totals, pricing.py computes per-item discounts; both are synchronous and share no state.",
+        "location": {"file_path": "orders.py", "symbol": null, "line_start": 1, "line_end": null},
+        "severity": null,
+        "suggested_action": null
+      }
+    ],
+    "coverage_note": null
+  }
+}

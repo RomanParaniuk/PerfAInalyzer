@@ -1,0 +1,39 @@
+{
+  "scope_path": "tests/fixtures/anti_pattern_sample",
+  "detected_languages": ["python"],
+  "file_count": 2,
+  "max_parallel": 1,
+  "partitions": [
+    {"partition_id": "p1", "files": ["orders.py", "pricing.py"], "total_bytes": 1886}
+  ],
+  "units": [
+    {
+      "unit_id": "structural_context--all",
+      "stage": "structural_context",
+      "partition_id": "all",
+      "files": ["orders.py", "pricing.py"],
+      "result_file": "structural_context--all.json"
+    },
+    {
+      "unit_id": "algorithmic_complexity--p1",
+      "stage": "algorithmic_complexity",
+      "partition_id": "p1",
+      "files": ["orders.py", "pricing.py"],
+      "result_file": "algorithmic_complexity--p1.json"
+    },
+    {
+      "unit_id": "resource_io_efficiency--p1",
+      "stage": "resource_io_efficiency",
+      "partition_id": "p1",
+      "files": ["orders.py", "pricing.py"],
+      "result_file": "resource_io_efficiency--p1.json"
+    },
+    {
+      "unit_id": "concurrency_scalability--p1",
+      "stage": "concurrency_scalability",
+      "partition_id": "p1",
+      "files": ["orders.py", "pricing.py"],
+      "result_file": "concurrency_scalability--p1.json"
+    }
+  ]
+}

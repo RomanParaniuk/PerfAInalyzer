@@ -1,0 +1,69 @@
+# Performance Analysis Report
+
+- **Analyzed path**: `{{ scope_path }}`
+- **Generated**: {{ generated_at }}
+- **Run status**: {{ run_status }}
+- **Detected languages**: {{ languages }}
+
+## Issues
+
+{% if report.issues %}
+{% for issue in report.issues %}
+### {{ loop.index }}. [{{ issue.severity.value | upper }}] {{ location_str(issue.location) }}
+
+{{ issue.description }}
+
+- **Severity**: {{ issue.severity.value | capitalize }}
+- **Location**: `{{ location_str(issue.location) }}`
+- **Stage**: {{ stage_label(issue.originating_stage) }}
+- **Finding ID**: `{{ issue.finding_id }}`
+
+{% endfor %}
+{% else %}
+No performance issues were found in this analysis run.
+{% endif %}
+
+## Action Items
+
+{% if report.action_items %}
+{% for item in report.action_items %}
+{{ loop.index }}. **[{{ item.priority.value | upper }}]** {{ item.recommendation }}
+   (addresses `{{ item.related_finding_ids | join('`, `') }}`; stage: {{ action_item_stage(item) }})
+{% endfor %}
+{% else %}
+No action items were identified in this analysis run.
+{% endif %}
+
+## Valuable Findings
+
+{% if report.valuable_findings %}
+{% for finding in report.valuable_findings %}
+- {{ finding.description }}
+  (`{{ location_str(finding.location) }}`; stage: {{ stage_label(finding.originating_stage) }})
+{% endfor %}
+{% else %}
+No valuable findings were recorded in this analysis run.
+{% endif %}
+
+## Analysis Coverage
+
+{% if report.incomplete_stages %}
+The following analysis stages did not complete; their findings are missing from this report:
+{% for entry in report.incomplete_stages %}
+- **{{ stage_label(entry.stage) }}** did not complete: {{ entry.reason }}
+{% endfor %}
+{% else %}
+All analysis stages completed.
+{% endif %}
+{% if report.coverage_note %}
+
+**Coverage note**: {{ report.coverage_note }}
+{% endif %}
+{% if report.limitations %}
+
+### Limitations
+
+{% for limitation in report.limitations %}
+- {{ limitation }}
+{% endfor %}
+{% endif %}

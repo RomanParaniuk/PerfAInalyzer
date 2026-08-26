@@ -1,0 +1,15 @@
+{
+  "unit_id": "resource_io_efficiency--p1",
+  "result": {
+    "stage_name": "resource_io_efficiency",
+    "findings": [
+      {
+        "kind": "issue",
+        "description": "load_orders opens and reads the orders file inside the per-customer loop, so the same file is re-read once per customer.",
+        "location": {"file_path": "orders.py", "symbol": "load_orders", "line_start": 3, "line_end": 10},
+        "severity": "high"
+      }
+    ],
+    "coverage_note": null
+  }
+}

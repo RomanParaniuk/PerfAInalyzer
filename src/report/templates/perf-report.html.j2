@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Performance Analysis Report</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+         max-width: 60rem; margin: 2rem auto; padding: 0 1rem; color: #1a1a2e; line-height: 1.55; }
+  h1 { border-bottom: 2px solid #e0e0ef; padding-bottom: .4rem; }
+  h2 { margin-top: 2rem; border-bottom: 1px solid #e0e0ef; padding-bottom: .25rem; }
+  code { background: #f4f4fa; padding: .1rem .35rem; border-radius: 4px; font-size: .92em; }
+  .meta { color: #555; }
+  .item { margin: 1rem 0; padding: .75rem 1rem; border: 1px solid #e0e0ef; border-radius: 8px; }
+  .badge { display: inline-block; font-size: .78em; font-weight: 700; padding: .12rem .5rem;
+           border-radius: 999px; color: #fff; margin-right: .5rem; }
+  .critical { background: #b3261e; } .high { background: #d9772b; }
+  .medium { background: #b98a00; } .low { background: #4a7a4a; }
+  .stage { color: #555; font-size: .9em; }
+  .empty { color: #555; font-style: italic; }
+</style>
+</head>
+<body>
+<h1>Performance Analysis Report</h1>
+<ul class="meta">
+  <li><strong>Analyzed path</strong>: <code>{{ scope_path }}</code></li>
+  <li><strong>Generated</strong>: {{ generated_at }}</li>
+  <li><strong>Run status</strong>: {{ run_status }}</li>
+  <li><strong>Detected languages</strong>: {{ languages }}</li>
+</ul>
+
+<h2>Issues</h2>
+{% if report.issues %}
+{% for issue in report.issues %}
+<div class="item">
+  <p><span class="badge {{ issue.severity.value }}">{{ issue.severity.value | upper }}</span>
+     <strong>{{ loop.index }}. {{ location_str(issue.location) }}</strong></p>
+  <p>{{ issue.description }}</p>
+  <ul>
+    <li><strong>Severity</strong>: {{ issue.severity.value | capitalize }}</li>
+    <li><strong>Location</strong>: <code>{{ location_str(issue.location) }}</code></li>
+    <li><strong>Stage</strong>: <span class="stage">{{ stage_label(issue.originating_stage) }}</span></li>
+    <li><strong>Finding ID</strong>: <code>{{ issue.finding_id }}</code></li>
+  </ul>
+</div>
+{% endfor %}
+{% else %}
+<p class="empty">No performance issues were found in this analysis run.</p>
+{% endif %}
+
+<h2>Action Items</h2>
+{% if report.action_items %}
+<ol>
+{% for item in report.action_items %}
+  <li>
+    <span class="badge {{ item.priority.value }}">{{ item.priority.value | upper }}</span>
+    {{ item.recommendation }}
+    <span class="stage">(addresses {% for fid in item.related_finding_ids %}<code>{{ fid }}</code>{% if not loop.last %}, {% endif %}{% endfor %};
+    stage: {{ action_item_stage(item) }})</span>
+  </li>
+{% endfor %}
+</ol>
+{% else %}
+<p class="empty">No action items were identified in this analysis run.</p>
+{% endif %}
+
+<h2>Valuable Findings</h2>
+{% if report.valuable_findings %}
+<ul>
+{% for finding in report.valuable_findings %}
+  <li>{{ finding.description }}
+      <span class="stage">(<code>{{ location_str(finding.location) }}</code>;
+      stage: {{ stage_label(finding.originating_stage) }})</span></li>
+{% endfor %}
+</ul>
+{% else %}
+<p class="empty">No valuable findings were recorded in this analysis run.</p>
+{% endif %}
+
+<h2>Analysis Coverage</h2>
+{% if report.incomplete_stages %}
+<p>The following analysis stages did not complete; their findings are missing from this report:</p>
+<ul>
+{% for entry in report.incomplete_stages %}
+  <li><strong>{{ stage_label(entry.stage) }}</strong> did not complete: {{ entry.reason }}</li>
+{% endfor %}
+</ul>
+{% else %}
+<p>All analysis stages completed.</p>
+{% endif %}
+{% if report.coverage_note %}
+<p><strong>Coverage note</strong>: {{ report.coverage_note }}</p>
+{% endif %}
+{% if report.limitations %}
+<h3>Limitations</h3>
+<ul>
+{% for limitation in report.limitations %}
+  <li>{{ limitation }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+</body>
+</html>
