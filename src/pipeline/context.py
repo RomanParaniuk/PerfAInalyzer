@@ -40,6 +40,9 @@ DEFAULT_STAGE_INPUT_BUDGETS: dict[StageName, int] = {
     StageName.ALGORITHMIC_COMPLEXITY: 40_000,
     StageName.RESOURCE_IO_EFFICIENCY: 40_000,
     StageName.CONCURRENCY_SCALABILITY: 40_000,
+    StageName.MEMORY_ALLOCATION: 40_000,
+    StageName.DATA_ACCESS_EFFICIENCY: 40_000,
+    StageName.STARTUP_INITIALIZATION: 40_000,
 }
 
 assert DEFAULT_STAGE_INPUT_BUDGETS[StageName.STRUCTURAL_CONTEXT] < HAIKU_CONTEXT_WINDOW_TOKENS
@@ -331,6 +334,35 @@ _STAGE_PATTERNS: dict[StageName, list[tuple[re.Pattern[str], float]]] = {
         (re.compile(r"\b(?:goroutine|go\s+func|chan\b|channel)\b"), 2.0),
         (re.compile(r"\b(?:queue|Queue|deque)\b"), 1.0),
     ],
+    StageName.MEMORY_ALLOCATION: [
+        (re.compile(r"\bdeepcopy\b|\.copy\(|\bclone\("), 2.0),
+        (re.compile(r"\b(?:cache|Cache|memo)\w*\b"), 1.5),
+        (re.compile(r"\.(?:append|push|extend|add|insert)\("), 1.0),
+        (re.compile(r"\+=\s*['\"]|\+\s*['\"]"), 1.5),
+        (re.compile(r"\b(?:global|weakref|__del__|gc)\b"), 1.5),
+        (re.compile(r"\b(?:addEventListener|removeEventListener|subscribe|unsubscribe|on|off)\("), 1.0),
+        (re.compile(r"\b(?:StringIO|BytesIO|StringBuilder|bytearray)\b"), 1.0),
+        (re.compile(r"\breadlines?\(\)|\.to_list\(|\btolist\(|\blist\("), 1.0),
+    ],
+    StageName.DATA_ACCESS_EFFICIENCY: [
+        (re.compile(r"\bSELECT\b|\bINSERT\b|\bUPDATE\b|\bDELETE\b|\bJOIN\b", re.IGNORECASE), 2.0),
+        (re.compile(r"\b(?:execute|executemany|cursor|fetchall|fetchone|fetchmany)\b"), 2.0),
+        (re.compile(r"\b(?:session|objects|query|queryset|findOne|findMany|findAll|aggregate)\b"), 1.5),
+        (re.compile(r"\b(?:sqlalchemy|django\.db|prisma|typeorm|sequelize|knex|mongoose|pymongo|redis)\b", re.IGNORECASE), 2.0),
+        (re.compile(r"\b(?:commit|rollback|transaction|savepoint)\b"), 1.5),
+        (re.compile(r"\b(?:select_related|prefetch_related|joinedload|selectinload|eager)\b"), 2.0),
+        (re.compile(r"\bLIMIT\b|\bOFFSET\b|\bpaginat\w+\b", re.IGNORECASE), 1.0),
+        (re.compile(r"\b(?:ForeignKey|relationship|belongs_to|has_many|hasMany)\b"), 1.0),
+    ],
+    StageName.STARTUP_INITIALIZATION: [
+        (re.compile(r"__main__|\bdef main\b|\bfunc main\b|if __name__"), 2.0),
+        (re.compile(r"\b(?:init|setup|bootstrap|configure|startup)\w*\s*\("), 1.5),
+        (re.compile(r"\bre\.compile\(|\bcompile\("), 1.0),
+        (re.compile(r"\b(?:getenv|environ|dotenv|load_dotenv|ConfigParser|from_envvar)\b"), 1.5),
+        (re.compile(r"\b(?:load_model|load_config|read_config|load_settings|parse_config)\b"), 2.0),
+        (re.compile(r"\b(?:json|yaml|toml|pickle)\.(?:load|safe_load|loads)\("), 1.0),
+        (re.compile(r"\b(?:import_module|__import__|require)\("), 1.5),
+    ],
     StageName.STRUCTURAL_CONTEXT: [],  # handled by _structural_score
 }
 
@@ -379,6 +411,11 @@ def score_chunk(chunk: CodeChunk, stage: StageName, file_index: FileIndex) -> fl
             score += depth * 5.0
         if chunk.symbol and re.search(rf"\b{re.escape(chunk.symbol)}\s*\(", chunk.text[chunk.text.find("\n") + 1 :]):
             score += 2.0  # likely recursion
+    if stage is StageName.STARTUP_INITIALIZATION:
+        # Startup cost concentrates in entry points and module-level code.
+        if _ENTRYPOINT_NAME_RE.search(chunk.file.rel_path):
+            score += 3.0
+        score += min(len(file_index.imports), 10) * 0.2
     return score
 
 

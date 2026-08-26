@@ -27,8 +27,8 @@ first.
   and change nothing.
 
 If `03-plan.md` or `results/workplan.json` already exist, you are re-running: overwrite
-both, and note that `results/<unit>.json` findings, `04-findings.md`, and reports now
-predate the new plan and should be regenerated.
+both, and note that `results/<unit>.json` findings, the `04a`–`04d` digests, and
+reports now predate the new plan and should be regenerated.
 
 ## 2. The parallelism limit
 
@@ -84,12 +84,16 @@ files it contains, each with its depth>
 ## Estimated cost
 
 ~<low>–<high> tokens for the analysis stage (input estimate: total included bytes / 4
-chars-per-token × 4 stage passes, halved for skim-dominated units; plus output). Stated
+chars-per-token × 7 stage passes, halved for skim-dominated units; plus output). Stated
 so the actual spend can be compared after `/perf-exec`.
 
 ## Next stage
 
-Run `/perf-exec` to execute the analysis. Machine-readable plan:
+Run `/perf-exec` to execute all seven analysis dimensions, or go dimension by
+dimension: `/perf-exec-structural`, then `/perf-exec-complexity`,
+`/perf-exec-resource-io`, `/perf-exec-concurrency`, `/perf-exec-memory`,
+`/perf-exec-data-access`, `/perf-exec-startup` — then optionally
+`/perf-exec-verify`. Machine-readable plan:
 `results/workplan.json` (regenerate with `/perf-plan` rather than editing it by hand).
 ```
 
@@ -97,4 +101,5 @@ Run `/perf-exec` to execute the analysis. Machine-readable plan:
 
 Tell the user: where the artifacts were written, the unit count and partition count,
 which components are skipped, the token estimate, the cap notice if it applied, the
-staleness notice if this was a re-run, and that the next command is `/perf-exec`.
+staleness notice if this was a re-run, and that the next command is `/perf-exec`
+(or `/perf-exec-structural` to execute one dimension at a time).

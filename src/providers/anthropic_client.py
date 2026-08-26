@@ -28,6 +28,9 @@ STAGE_MODELS: dict[StageName, str] = {
     StageName.ALGORITHMIC_COMPLEXITY: "claude-sonnet-5",
     StageName.RESOURCE_IO_EFFICIENCY: "claude-sonnet-5",
     StageName.CONCURRENCY_SCALABILITY: "claude-sonnet-5",
+    StageName.MEMORY_ALLOCATION: "claude-sonnet-5",
+    StageName.DATA_ACCESS_EFFICIENCY: "claude-sonnet-5",
+    StageName.STARTUP_INITIALIZATION: "claude-sonnet-5",
 }
 
 TOOL_NAME = "report_stage_findings"

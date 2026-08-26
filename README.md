@@ -1,6 +1,6 @@
 # Perf AI
 
-Perf AI is a four-stage AI performance analysis pipeline for codebases. It reads your
+Perf AI is a multi-stage AI performance analysis pipeline for codebases. It reads your
 source code and reasons about it — **static analysis only**: the submitted code is never
 executed, compiled, or profiled. Each run produces two reports, `perf-report.md` and
 `perf-report.html`, listing performance issues (with severity and a concrete suggested
@@ -13,10 +13,12 @@ There are two independent ways to run an analysis:
 | **Hosted-API CLI** | `perf-ai analyze` | `ANTHROPIC_API_KEY` required | Your terminal |
 | **Claude Code plugin** | `/perf-analyze` | **None** — uses the agent's own model access | A Claude Code session |
 
-The four stages are the same on both paths: structural/context analysis first, then
-algorithmic complexity, resource & I/O efficiency, and concurrency & scalability. Both
-paths render reports through the same deterministic templates, so their output structure
-is identical.
+The seven analysis stages are the same on both paths: structural/context analysis
+first, then algorithmic complexity, resource & I/O efficiency, concurrency &
+scalability, memory & allocation, data access & query efficiency, and startup &
+initialization. Both paths render reports through the same deterministic templates,
+so their output structure is identical. (The staged plugin workflow adds an optional
+adversarial-verification pass on top — see below.)
 
 ## Prerequisites
 
@@ -102,17 +104,32 @@ In a session of a project where the plugin is installed:
 ### Staged workflow (plugin, one command per stage)
 
 `/perf-analyze` does everything in one invocation. The staged commands run the same
-analysis as five separate stages, each writing a durable, hand-editable Markdown
-artifact that the next stage consumes — so you can stop after any stage, inspect or
-edit its output, and continue (or re-run just that stage) at any time:
+analysis as separate stages, each writing a durable, hand-editable Markdown artifact
+that the next stage consumes — so you can stop after any stage, inspect or edit its
+output, and continue (or re-run just that stage) at any time. The execution stage is
+split by analysis dimension, one command per unit stage:
 
 | # | Command | Reads | Writes |
 |---|---------|-------|--------|
 | 1 | `/perf-arch [path]` | the codebase | `01-architecture.md` — components, entry points, sizes, perf relevance |
 | 2 | `/perf-scope [accept]` | `01-architecture.md` | `02-scope.md` — review depth per component (deep / standard / skim / skip), confirmed by you |
 | 3 | `/perf-plan [max-parallel=N]` | `02-scope.md` | `03-plan.md` + `results/workplan.json` — ordered work units, skipped components excluded, token estimate |
-| 4 | `/perf-exec [only-failed]` | `03-plan.md`, `results/workplan.json` | `results/<unit>.json` per work unit + `04-findings.md` digest |
+| 4a | `/perf-exec-structural` | `03-plan.md`, `results/workplan.json` | `results/structural_context--all.json` + `04a-structural.md` — the structural summary shared by 4b–4g |
+| 4b | `/perf-exec-complexity [only-failed]` | `results/workplan.json`, `02-scope.md`, `04a-structural.md` | `results/algorithmic_complexity--*.json` + `04b-complexity.md` digest |
+| 4c | `/perf-exec-resource-io [only-failed]` | `results/workplan.json`, `02-scope.md`, `04a-structural.md` | `results/resource_io_efficiency--*.json` + `04c-resource-io.md` digest |
+| 4d | `/perf-exec-concurrency [only-failed]` | `results/workplan.json`, `02-scope.md`, `04a-structural.md` | `results/concurrency_scalability--*.json` + `04d-concurrency.md` digest |
+| 4e | `/perf-exec-memory [only-failed]` | `results/workplan.json`, `02-scope.md`, `04a-structural.md` | `results/memory_allocation--*.json` + `04e-memory.md` digest |
+| 4f | `/perf-exec-data-access [only-failed]` | `results/workplan.json`, `02-scope.md`, `04a-structural.md` | `results/data_access_efficiency--*.json` + `04f-data-access.md` digest |
+| 4g | `/perf-exec-startup [only-failed]` | `results/workplan.json`, `02-scope.md`, `04a-structural.md` | `results/startup_initialization--*.json` + `04g-startup.md` digest |
+| 4h | `/perf-exec-verify` *(optional)* | every `results/<stage>--*.json` | `results/verification.json` + `04h-verify.md` — adversarial re-check of critical/high issues |
 | 5 | `/perf-report [output-dir]` | `results/*.json` | `perf-report.md` / `perf-report.html` — same renderer and structure as the one-shot path |
+
+`/perf-exec [only-failed]` is the umbrella over stage 4: it runs 4a–4g in order
+(the optional 4h verification pass is invoked separately). Stage 4a must run first
+(its structural summary is the shared context); 4b–4g can then run in any order,
+individually or together. When `results/verification.json` exists, `/perf-report`
+automatically drops the issues the verification refuted and notes the outcome in
+the report's limitations section; delete the file to render without the overlay.
 
 All artifacts for a target live in one reusable workspace,
 `analysis-runs/<target-name>/`, under the directory where you invoke the commands.
@@ -127,8 +144,12 @@ Rules of the workflow:
   component map in `01-architecture.md`) in your editor, then run the next stage.
 - **Components marked `skip` get no work units** and are named as deliberately
   excluded in the final report; `skim` components get entry-points-only review.
-- Stage 4 checkpoints one JSON per work unit, so an interrupted run can continue with
-  `/perf-exec only-failed`, re-running only missing or failed units.
+- The execution stages checkpoint one JSON per work unit, so an interrupted run can
+  continue with `/perf-exec only-failed` (or a single dimension's command with
+  `only-failed`), re-running only missing or failed units.
+- Each execution stage touches only its own dimension's result files and digest —
+  re-running `/perf-exec-complexity` never disturbs the resource-I/O or concurrency
+  results.
 
 ## Reports
 
@@ -149,7 +170,7 @@ contains:
 src/
 ├── cli/main.py          # `perf-ai` CLI: the `analyze` command (hosted path)
 ├── cli/agent.py         # `perf-ai agent scope|render`: deterministic helpers for the plugin path
-├── pipeline/            # hosted-path orchestrator and the four stage definitions
+├── pipeline/            # hosted-path orchestrator and the seven stage definitions
 │   └── stages/          # stage definitions as markdown: frontmatter + instructions
 │                        # (both paths read these; system-*.md hold the system prompts)
 ├── agentrun/            # plugin-path support: work-plan partitioning, result
@@ -161,7 +182,7 @@ src/
 └── lib/discovery.py     # language detection and file discovery (both paths)
 
 skills/perf-analyze/SKILL.md   # the one-shot /perf-analyze skill (plugin orchestration procedure)
-skills/perf-{arch,scope,plan,exec,report}/  # the staged workflow, one skill per stage
+skills/perf-{arch,scope,plan,exec,exec-*,report}/  # the staged workflow: one skill per stage, one per execution dimension (plus the optional exec-verify pass)
 scripts/plugin_run.py          # stdlib-only plugin bootstrap (venv provisioning + dispatch)
 .claude-plugin/                # plugin.json + marketplace.json manifests
 tests/                         # unit, contract, and integration suites

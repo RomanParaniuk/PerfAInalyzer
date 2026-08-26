@@ -24,6 +24,11 @@ from pydantic import ValidationError
 
 from src.agentrun.dedupe import dedupe_findings
 from src.agentrun.results import all_units_failed, build_stages, load_unit_results
+from src.agentrun.verification import (
+    VERIFICATION_FILENAME,
+    apply_verification,
+    load_verification,
+)
 from src.agentrun.workplan import (
     MAX_PARALLEL_MAX,
     MAX_PARALLEL_MIN,
@@ -169,6 +174,17 @@ def render(
     # parallel same-stage subagents collapse to one location-keyed survivor.
     stages, coverage_notes = build_stages(outcomes, dedupe=dedupe_findings)
 
+    # Optional stage-4h overlay: refuted issues are dropped, the outcome is a
+    # limitations note; a missing or unusable file never blocks the render.
+    limitations: list[str] = []
+    verification, verification_warning = load_verification(
+        results_dir / VERIFICATION_FILENAME
+    )
+    if verification_warning:
+        typer.echo(f"Warning: {verification_warning}", err=True)
+    if verification is not None:
+        limitations.append(apply_verification(stages, verification).note)
+
     incomplete = any(
         s.status in (StageStatus.FAILED, StageStatus.TIMED_OUT) for s in stages
     )
@@ -181,7 +197,7 @@ def render(
         detected_languages=plan.detected_languages,
         stages=stages,
     )
-    report = aggregate(run, coverage_notes=coverage_notes)
+    report = aggregate(run, coverage_notes=coverage_notes, limitations=limitations)
     run.report = report
     md_path, html_path = write_reports(report, run, output_dir)
     typer.echo(f"Report written to {md_path} and {html_path}")

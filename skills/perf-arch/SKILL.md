@@ -17,8 +17,17 @@ artifact that the next stage consumes:
 | 1. Architecture review | `/perf-arch [path]` | `01-architecture.md` |
 | 2. Depth survey | `/perf-scope` | `02-scope.md` |
 | 3. Analysis plan | `/perf-plan [max-parallel=N]` | `03-plan.md` + `results/workplan.json` |
-| 4. Analysis execution | `/perf-exec [only-failed]` | `results/<unit>.json` + `04-findings.md` |
+| 4a. Structural-context execution | `/perf-exec-structural` | `results/structural_context--all.json` + `04a-structural.md` |
+| 4b. Algorithmic-complexity execution | `/perf-exec-complexity [only-failed]` | `results/<unit>.json` + `04b-complexity.md` |
+| 4c. Resource & I/O execution | `/perf-exec-resource-io [only-failed]` | `results/<unit>.json` + `04c-resource-io.md` |
+| 4d. Concurrency execution | `/perf-exec-concurrency [only-failed]` | `results/<unit>.json` + `04d-concurrency.md` |
+| 4e. Memory & allocation execution | `/perf-exec-memory [only-failed]` | `results/<unit>.json` + `04e-memory.md` |
+| 4f. Data-access execution | `/perf-exec-data-access [only-failed]` | `results/<unit>.json` + `04f-data-access.md` |
+| 4g. Startup & initialization execution | `/perf-exec-startup [only-failed]` | `results/<unit>.json` + `04g-startup.md` |
+| 4h. Verification (optional) | `/perf-exec-verify` | `results/verification.json` + `04h-verify.md` |
 | 5. Report finalization | `/perf-report [output-dir]` | `perf-report.md` / `perf-report.html` |
+
+(`/perf-exec [only-failed]` is the umbrella that runs 4a–4g in order.)
 
 ## 1. Resolve target and workspace
 
@@ -26,8 +35,9 @@ artifact that the next stage consumes:
 - Workspace: `<cwd>/analysis-runs/<basename of target>/`. Create it if missing.
 - If `01-architecture.md` already exists in the workspace, you are **re-running the
   stage**: overwrite it, and afterwards tell the user that any existing downstream
-  artifacts (`02-scope.md`, `03-plan.md`, `results/`, `04-findings.md`, reports) now
-  predate the new architecture and should be regenerated with their commands. Never
+  artifacts (`02-scope.md`, `03-plan.md`, `results/`, the `04a`–`04d` digests,
+  reports) now predate the new architecture and should be regenerated with their
+  commands. Never
   delete or modify downstream artifacts yourself.
 
 ## 2. Preflight (deterministic)

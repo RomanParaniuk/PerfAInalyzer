@@ -1,6 +1,6 @@
 ---
 name: perf-analyze
-description: Run a four-stage static performance analysis of a codebase using parallel subagents and produce perf-report.md / perf-report.html. Use when the user asks to analyze performance, find performance issues or bottlenecks, or run perf-ai on a path. Invoked as /perf-analyze [path] [max-parallel=N]. Uses the invoking agent's own model access — never an API key.
+description: Run a seven-stage static performance analysis of a codebase using parallel subagents and produce perf-report.md / perf-report.html. Use when the user asks to analyze performance, find performance issues or bottlenecks, or run perf-ai on a path. Invoked as /perf-analyze [path] [max-parallel=N]. Uses the invoking agent's own model access — never an API key.
 ---
 
 # perf-analyze — agent-path performance analysis
@@ -15,7 +15,10 @@ nor any subagent may execute, compile, or profile the submitted code.
 This is the **one-shot** path: everything in a single invocation. For a staged run —
 one command per stage, durable Markdown artifacts between stages, re-runnable at any
 point — use `/perf-arch` → `/perf-scope` → `/perf-plan` → `/perf-exec` →
-`/perf-report` instead.
+`/perf-report` instead (the execution stage also splits into per-dimension commands:
+`/perf-exec-structural`, `/perf-exec-complexity`, `/perf-exec-resource-io`,
+`/perf-exec-concurrency`, `/perf-exec-memory`, `/perf-exec-data-access`,
+`/perf-exec-startup`, plus the optional `/perf-exec-verify`).
 
 Every deterministic step is invoked as:
 
@@ -103,16 +106,19 @@ prompt must include:
 ## 5. Run the remaining units in waves of at most N
 
 The remaining units (from the work plan, in order) are `<stage>--<partition>` units for
-the three analysis stages. Stage instruction files:
+the six analysis stages. Stage instruction files:
 
 | Stage | Instructions file |
 |---|---|
 | `algorithmic_complexity` | `${CLAUDE_PLUGIN_ROOT}/src/pipeline/stages/complexity.md` |
 | `resource_io_efficiency` | `${CLAUDE_PLUGIN_ROOT}/src/pipeline/stages/resource_io.md` |
 | `concurrency_scalability` | `${CLAUDE_PLUGIN_ROOT}/src/pipeline/stages/concurrency.md` |
+| `memory_allocation` | `${CLAUDE_PLUGIN_ROOT}/src/pipeline/stages/memory.md` |
+| `data_access_efficiency` | `${CLAUDE_PLUGIN_ROOT}/src/pipeline/stages/data_access.md` |
+| `startup_initialization` | `${CLAUDE_PLUGIN_ROOT}/src/pipeline/stages/startup.md` |
 
 Each stage file is frontmatter plus an instruction body; the frontmatter's `system`
-key names the shared system-prompt file — for all three stages that is
+key names the shared system-prompt file — for all six stages that is
 `${CLAUDE_PLUGIN_ROOT}/src/pipeline/stages/system-sonnet.md`. Subagents follow the
 system prompt's rules together with their stage's instruction body.
 

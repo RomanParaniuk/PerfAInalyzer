@@ -23,8 +23,8 @@ authoritative input. If the table cannot be understood (e.g. edited into an unre
 state), stop, name the file and the specific problem, and change nothing.
 
 If `02-scope.md` already exists, you are re-running the stage: overwrite it, and note
-afterwards that `03-plan.md`, `results/`, `04-findings.md`, and any reports now predate
-the new scope and should be regenerated with their commands.
+afterwards that `03-plan.md`, `results/`, the `04a`–`04d` digests, and any reports now
+predate the new scope and should be regenerated with their commands.
 
 ## 2. Propose depths
 
@@ -32,7 +32,7 @@ Assign every component exactly one depth with a one-line reason:
 
 | Depth | Meaning in the analysis stage |
 |---|---|
-| `deep` | Every file is read fully; all four analysis dimensions applied thoroughly. |
+| `deep` | Every file is read fully; all analysis dimensions applied thoroughly. |
 | `standard` | Normal coverage — the default for ordinary application code. |
 | `skim` | Only entry points and obvious hot paths are examined. |
 | `skip` | Excluded entirely — no work units; named as excluded in the final report. |

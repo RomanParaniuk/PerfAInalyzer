@@ -87,10 +87,11 @@ class PipelineOutcome:
 
 ProgressCallback = Callable[[StageName, StageStatus, str | None], None]
 
-SONNET_STAGES: tuple[StageName, ...] = (
-    StageName.ALGORITHMIC_COMPLEXITY,
-    StageName.RESOURCE_IO_EFFICIENCY,
-    StageName.CONCURRENCY_SCALABILITY,
+# Every stage after the structural one runs on Sonnet, concurrently, against the
+# shared cached context — derived from STAGE_ORDER so new analysis dimensions join
+# the fan-out without touching the orchestration.
+SONNET_STAGES: tuple[StageName, ...] = tuple(
+    name for name in STAGE_ORDER if name is not StageName.STRUCTURAL_CONTEXT
 )
 
 
@@ -200,7 +201,7 @@ def run_pipeline(
     config: PipelineConfig | None = None,
     on_progress: ProgressCallback | None = None,
 ) -> PipelineOutcome:
-    """Run the four-stage pipeline. A failing/timed-out stage never blocks the rest of
+    """Run the full analysis pipeline. A failing/timed-out stage never blocks the rest of
     the run (FR-012); a `ProviderAuthError` on the first stage propagates so the CLI can
     exit with the configuration-error code before burning further calls."""
     if stage_specs is None:
@@ -262,8 +263,8 @@ def run_pipeline(
         except ProviderError as exc:
             structural_runner.record_failure(StageStatus.FAILED, str(exc))
 
-        # --- Stages 2-4: concurrent, against the cached shared context ------------
-        # Built once so the string is byte-identical across all three calls.
+        # --- Post-structural stages: concurrent, against the cached shared context --
+        # Built once so the string is byte-identical across all the Sonnet calls.
         shared_context = build_shared_context(index, stage1_summary)
 
         runners: dict[StageName, _StageRunner] = {}
@@ -282,7 +283,7 @@ def run_pipeline(
 
         # Stagger: fire one Sonnet stage, wait until the provider starts answering
         # (the cache entry for the shared prefix is written at that point), then
-        # fan out the remaining two as cache hits.
+        # fan out the remaining stages as cache hits.
         cache_primed = threading.Event()
         first_stage, *rest_stages = SONNET_STAGES
         futures = {

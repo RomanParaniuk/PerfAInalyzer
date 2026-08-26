@@ -21,7 +21,7 @@ MAX_PARALLEL_MAX = 10
 
 STRUCTURAL_UNIT_ID = "structural_context--all"
 
-# The three per-partition analysis stages; structural context is always one whole-scope
+# The per-partition analysis stages; structural context is always one whole-scope
 # unit whose summary the later units share (research.md §4).
 ANALYSIS_STAGES: tuple[StageName, ...] = tuple(
     stage for stage in STAGE_ORDER if stage is not StageName.STRUCTURAL_CONTEXT

@@ -34,6 +34,27 @@
       "partition_id": "p1",
       "files": ["orders.py", "pricing.py"],
       "result_file": "concurrency_scalability--p1.json"
+    },
+    {
+      "unit_id": "memory_allocation--p1",
+      "stage": "memory_allocation",
+      "partition_id": "p1",
+      "files": ["orders.py", "pricing.py"],
+      "result_file": "memory_allocation--p1.json"
+    },
+    {
+      "unit_id": "data_access_efficiency--p1",
+      "stage": "data_access_efficiency",
+      "partition_id": "p1",
+      "files": ["orders.py", "pricing.py"],
+      "result_file": "data_access_efficiency--p1.json"
+    },
+    {
+      "unit_id": "startup_initialization--p1",
+      "stage": "startup_initialization",
+      "partition_id": "p1",
+      "files": ["orders.py", "pricing.py"],
+      "result_file": "startup_initialization--p1.json"
     }
   ]
 }

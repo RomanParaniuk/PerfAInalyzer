@@ -15,8 +15,13 @@ Workspaces live under `<cwd>/analysis-runs/`, one per target: exactly one → us
 several → ask (non-interactive: stop with instructions); none → stop.
 
 **Preconditions**: `results/workplan.json` exists → otherwise stop, run `/perf-plan`;
-at least one `results/<unit>.json` exists → otherwise stop, run `/perf-exec`. Take the
-target path from `workplan.json`'s `scope_path`.
+at least one `results/<unit>.json` exists → otherwise stop, run `/perf-exec` (or the
+per-dimension `/perf-exec-*` commands). Take the target path from `workplan.json`'s
+`scope_path`. If some dimensions have result files and others have none, say which
+execution stages (4a–4g) are missing entirely — render anyway, but never present the
+report as full coverage. If `results/verification.json` exists (written by
+`/perf-exec-verify`), the renderer consumes it automatically: refuted issues are
+dropped and the outcome lands in the report's limitations section — no extra flag.
 
 **Staleness check** (report, don't block): compare artifact timestamps. If
 `01-architecture.md`, `02-scope.md`, or `03-plan.md` is newer than the newest
@@ -57,6 +62,11 @@ Tell the user:
   `skim` in `02-scope.md` are named as deliberately excluded/limited — never silently
   omitted.
 - Any staleness flag from step 1.
+- Whether a verification overlay was applied: how many issues it confirmed and how
+  many refuted issues were dropped (from the renderer's limitations note) — or, when
+  no `verification.json` exists, that `/perf-exec-verify` can optionally re-check
+  the critical/high issues before the report is trusted.
 - That any stage can be re-run at any time by its command (`/perf-arch`, `/perf-scope`,
-  `/perf-plan`, `/perf-exec`, `/perf-report`) — each overwrites its own artifact and
+  `/perf-plan`, `/perf-exec` or a per-dimension `/perf-exec-*` command,
+  `/perf-exec-verify`, `/perf-report`) — each overwrites its own artifact and
   downstream stages are then regenerated on request, never automatically.

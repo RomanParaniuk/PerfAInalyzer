@@ -4,7 +4,7 @@ before it reaches the aggregator, independent of model output reliability."""
 from pathlib import Path
 
 from src.lib.discovery import discover_files
-from src.models.stage import StageName, StageResult, StageStatus
+from src.models.stage import STAGE_ORDER, StageName, StageResult, StageStatus
 from src.pipeline.orchestrator import run_pipeline, stamp_findings
 from src.pipeline.stages import get_stage_specs
 
@@ -38,7 +38,7 @@ def test_orchestrator_stamps_every_finding_regardless_of_model_output(tmp_path: 
     )
 
     completed = [s for s in outcome.run.stages if s.status is StageStatus.COMPLETED]
-    assert len(completed) == 4
+    assert len(completed) == len(STAGE_ORDER)
     all_findings = [f for stage in outcome.run.stages for f in stage.findings]
     assert all_findings
     for stage in outcome.run.stages:

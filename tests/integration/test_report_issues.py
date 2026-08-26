@@ -5,6 +5,8 @@ and never executes/compiles the fixture code (SC-001)."""
 import sys
 from pathlib import Path
 
+from src.models.stage import STAGE_ORDER
+
 from tests.support.helpers import ANTI_PATTERN_FIXTURE, invoke_analyze, read_reports
 from tests.support.mock_provider import MockProvider, anti_pattern_results
 
@@ -30,18 +32,13 @@ def test_reports_identify_planted_anti_pattern(monkeypatch, tmp_path: Path):
     assert "orders.py:9-17" in md
 
 
-def test_all_four_stages_called_through_mock_provider(monkeypatch, tmp_path: Path):
+def test_all_stages_called_through_mock_provider(monkeypatch, tmp_path: Path):
     provider = MockProvider(results=anti_pattern_results())
     result = invoke_analyze(monkeypatch, provider, ANTI_PATTERN_FIXTURE, tmp_path)
 
     assert result.exit_code == 0, result.output
-    assert len(provider.calls) == 4
-    assert {c.stage_name for c in provider.calls} == {
-        "structural_context",
-        "algorithmic_complexity",
-        "resource_io_efficiency",
-        "concurrency_scalability",
-    }
+    assert len(provider.calls) == len(STAGE_ORDER)
+    assert {c.stage_name for c in provider.calls} == set(STAGE_ORDER)
 
 
 def test_fixture_code_never_executed_or_compiled(monkeypatch, tmp_path: Path):

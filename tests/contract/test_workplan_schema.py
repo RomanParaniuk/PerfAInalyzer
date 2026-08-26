@@ -86,8 +86,9 @@ class TestPartitionCountFormula:
         assert len(_plan(max_parallel=10).partitions) == 3  # ceil(10/3)=4, clamped at 3 files
 
     def test_unit_counts(self):
-        assert len(_plan(max_parallel=1).units) == 4  # 1 structural + 3 stages x 1
-        assert len(_plan(max_parallel=4).units) == 7  # 1 structural + 3 stages x 2
+        stages = len(ANALYSIS_STAGES)
+        assert len(_plan(max_parallel=1).units) == 1 + stages  # 1 structural + stages x 1
+        assert len(_plan(max_parallel=4).units) == 1 + stages * 2  # 1 structural + stages x 2
 
 
 class TestDeterminism:

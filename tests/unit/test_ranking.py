@@ -48,6 +48,38 @@ def record(event, log):
         log.append(event)
 '''
 
+MEMORY_SOURCE = '''\
+import copy
+
+
+def snapshot(history, entry, cache):
+    backup = copy.deepcopy(history)
+    history.append(entry)
+    cache[entry.id] = backup
+    return backup
+'''
+
+DATA_ACCESS_SOURCE = '''\
+def load_orders(conn, ids):
+    rows = []
+    cursor = conn.cursor()
+    for order_id in ids:
+        cursor.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
+        rows.append(cursor.fetchone())
+    return rows
+'''
+
+STARTUP_SOURCE = '''\
+import os
+import re
+
+
+def handle(request):
+    pattern = re.compile(r"order-(\\d+)")
+    api_key = os.getenv("API_KEY")
+    return pattern.match(request), api_key
+'''
+
 PLAIN_SOURCE = '''\
 def add(a, b):
     return a + b
@@ -90,6 +122,30 @@ class TestRanking:
         )
         ranked = rank_chunks(index, StageName.CONCURRENCY_SCALABILITY)
         assert ranked[0][1].file.rel_path == "locks.py"
+
+    def test_memory_stage_ranks_copy_churn_first(self, tmp_path: Path):
+        index = build_index(
+            tmp_path, {"churn.py": MEMORY_SOURCE, "plain.py": PLAIN_SOURCE}
+        )
+        ranked = rank_chunks(index, StageName.MEMORY_ALLOCATION)
+        assert ranked[0][1].file.rel_path == "churn.py"
+        assert ranked[0][0] > 0
+
+    def test_data_access_stage_ranks_queries_first(self, tmp_path: Path):
+        index = build_index(
+            tmp_path, {"queries.py": DATA_ACCESS_SOURCE, "plain.py": PLAIN_SOURCE}
+        )
+        ranked = rank_chunks(index, StageName.DATA_ACCESS_EFFICIENCY)
+        assert ranked[0][1].file.rel_path == "queries.py"
+        assert ranked[0][0] > 0
+
+    def test_startup_stage_ranks_init_work_first(self, tmp_path: Path):
+        index = build_index(
+            tmp_path, {"handlers.py": STARTUP_SOURCE, "plain.py": PLAIN_SOURCE}
+        )
+        ranked = rank_chunks(index, StageName.STARTUP_INITIALIZATION)
+        assert ranked[0][1].file.rel_path == "handlers.py"
+        assert ranked[0][0] > 0
 
     def test_structural_stage_scores_every_chunk(self, tmp_path: Path):
         index = build_index(tmp_path, {"plain.py": PLAIN_SOURCE, "main.py": PLAIN_SOURCE})

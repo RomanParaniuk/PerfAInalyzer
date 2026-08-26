@@ -13,6 +13,9 @@ class StageName(StrEnum):
     ALGORITHMIC_COMPLEXITY = "algorithmic_complexity"
     RESOURCE_IO_EFFICIENCY = "resource_io_efficiency"
     CONCURRENCY_SCALABILITY = "concurrency_scalability"
+    MEMORY_ALLOCATION = "memory_allocation"
+    DATA_ACCESS_EFFICIENCY = "data_access_efficiency"
+    STARTUP_INITIALIZATION = "startup_initialization"
 
 
 # Fixed pipeline order (FR-002); also the tie-break order for report sorting.
@@ -21,6 +24,9 @@ STAGE_ORDER: tuple[StageName, ...] = (
     StageName.ALGORITHMIC_COMPLEXITY,
     StageName.RESOURCE_IO_EFFICIENCY,
     StageName.CONCURRENCY_SCALABILITY,
+    StageName.MEMORY_ALLOCATION,
+    StageName.DATA_ACCESS_EFFICIENCY,
+    StageName.STARTUP_INITIALIZATION,
 )
 
 STAGE_ORDER_INDEX: dict[StageName, int] = {name: i for i, name in enumerate(STAGE_ORDER)}
@@ -30,6 +36,9 @@ STAGE_LABELS: dict[StageName, str] = {
     StageName.ALGORITHMIC_COMPLEXITY: "Algorithmic Complexity Analysis",
     StageName.RESOURCE_IO_EFFICIENCY: "Resource & I/O Efficiency Analysis",
     StageName.CONCURRENCY_SCALABILITY: "Concurrency & Scalability Analysis",
+    StageName.MEMORY_ALLOCATION: "Memory & Allocation Analysis",
+    StageName.DATA_ACCESS_EFFICIENCY: "Data Access & Query Efficiency Analysis",
+    StageName.STARTUP_INITIALIZATION: "Startup & Initialization Analysis",
 }
 
 

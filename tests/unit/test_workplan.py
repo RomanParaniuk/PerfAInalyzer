@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.agentrun.workplan import build_work_plan, plan_to_json
+from src.agentrun.workplan import ANALYSIS_STAGES, build_work_plan, plan_to_json
 from src.lib.discovery import SourceFile, discover_files
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
@@ -70,18 +70,18 @@ class TestClamping:
         assert len(files) == 1
         plan = build_work_plan(CLEAN_FIXTURE, files, max_parallel=10)
         assert len(plan.partitions) == 1
-        assert len(plan.units) == 4  # structural + 3 stages x 1 partition
+        assert len(plan.units) == 1 + len(ANALYSIS_STAGES)  # structural + stages x 1 partition
         assert all(len(p.files) >= 1 for p in plan.partitions)
 
 
 class TestUnitCounts:
-    def test_n1_yields_exactly_four_units(self):
+    def test_n1_yields_one_unit_per_stage_plus_structural(self):
         files = discover_files(ANTI_PATTERN_FIXTURE)
         plan = build_work_plan(ANTI_PATTERN_FIXTURE, files, max_parallel=1)
-        assert len(plan.units) == 4
+        assert len(plan.units) == 1 + len(ANALYSIS_STAGES)
 
-    def test_n4_yields_two_partitions_and_seven_units(self):
+    def test_n4_yields_two_partitions_and_two_units_per_stage(self):
         files = discover_files(ANTI_PATTERN_FIXTURE)
         plan = build_work_plan(ANTI_PATTERN_FIXTURE, files, max_parallel=4)
         assert len(plan.partitions) == 2
-        assert len(plan.units) == 7
+        assert len(plan.units) == 1 + len(ANALYSIS_STAGES) * 2

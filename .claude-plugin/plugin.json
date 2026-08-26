@@ -1,7 +1,7 @@
 {
   "name": "perf-ai",
-  "version": "0.2.0",
-  "description": "Static performance analysis of a codebase with the invoking agent's own model access - no hosted API key. One-shot (/perf-analyze) or staged: /perf-arch, /perf-scope, /perf-plan, /perf-exec, /perf-report - one command per stage, durable Markdown artifacts between stages, re-runnable at any point. Deterministic steps run the bundled pipeline code; reports are identical in structure to the hosted-CLI path.",
+  "version": "0.4.0",
+  "description": "Static performance analysis of a codebase with the invoking agent's own model access - no hosted API key. One-shot (/perf-analyze) or staged: /perf-arch, /perf-scope, /perf-plan, then execution split per analysis dimension (/perf-exec-structural, /perf-exec-complexity, /perf-exec-resource-io, /perf-exec-concurrency, /perf-exec-memory, /perf-exec-data-access, /perf-exec-startup - or /perf-exec to run all seven; /perf-exec-verify optionally re-checks the high-severity findings), then /perf-report - one command per stage, durable Markdown artifacts between stages, re-runnable at any point. Deterministic steps run the bundled pipeline code; reports are identical in structure to the hosted-CLI path.",
   "author": {
     "name": "Perf AI maintainers"
   }

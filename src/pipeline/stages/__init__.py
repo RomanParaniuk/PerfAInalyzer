@@ -6,11 +6,11 @@ as its body. The markdown files are the single source of truth for both executio
 paths: this loader serves the hosted CLI, and the plugin skill points subagents at the
 same files.
 
-Cache note (Principle II): the three Sonnet stages reference one system-prompt file
+Cache note (Principle II): the Sonnet stages all reference one system-prompt file
 (`system-sonnet.md`), keeping their system prompt byte-identical — together with the
 identical tool definition and the shared context block, that makes the prompt-cache
-prefix identical across Stages 2-4. Stage-specific instructions ride *after* the cache
-checkpoint, in the user turn.
+prefix identical across every post-structural stage. Stage-specific instructions ride
+*after* the cache checkpoint, in the user turn.
 """
 
 from __future__ import annotations
@@ -25,6 +25,9 @@ STAGE_FILES: dict[StageName, str] = {
     StageName.ALGORITHMIC_COMPLEXITY: "complexity.md",
     StageName.RESOURCE_IO_EFFICIENCY: "resource_io.md",
     StageName.CONCURRENCY_SCALABILITY: "concurrency.md",
+    StageName.MEMORY_ALLOCATION: "memory.md",
+    StageName.DATA_ACCESS_EFFICIENCY: "data_access.md",
+    StageName.STARTUP_INITIALIZATION: "startup.md",
 }
 
 
