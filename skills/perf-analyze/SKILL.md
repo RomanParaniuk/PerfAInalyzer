@@ -12,6 +12,11 @@ subagents with your own model access. Never read, require, or prompt for
 `ANTHROPIC_API_KEY` or any hosted-provider credential. Static analysis only: neither you
 nor any subagent may execute, compile, or profile the submitted code.
 
+This is the **one-shot** path: everything in a single invocation. For a staged run —
+one command per stage, durable Markdown artifacts between stages, re-runnable at any
+point — use `/perf-arch` → `/perf-scope` → `/perf-plan` → `/perf-exec` →
+`/perf-report` instead.
+
 Every deterministic step is invoked as:
 
 ```bash

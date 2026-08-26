@@ -99,6 +99,37 @@ In a session of a project where the plugin is installed:
   own directory and downloads dependencies from PyPI — the one moment the plugin path
   needs the network. Later runs are offline and skip this step.
 
+### Staged workflow (plugin, one command per stage)
+
+`/perf-analyze` does everything in one invocation. The staged commands run the same
+analysis as five separate stages, each writing a durable, hand-editable Markdown
+artifact that the next stage consumes — so you can stop after any stage, inspect or
+edit its output, and continue (or re-run just that stage) at any time:
+
+| # | Command | Reads | Writes |
+|---|---------|-------|--------|
+| 1 | `/perf-arch [path]` | the codebase | `01-architecture.md` — components, entry points, sizes, perf relevance |
+| 2 | `/perf-scope [accept]` | `01-architecture.md` | `02-scope.md` — review depth per component (deep / standard / skim / skip), confirmed by you |
+| 3 | `/perf-plan [max-parallel=N]` | `02-scope.md` | `03-plan.md` + `results/workplan.json` — ordered work units, skipped components excluded, token estimate |
+| 4 | `/perf-exec [only-failed]` | `03-plan.md`, `results/workplan.json` | `results/<unit>.json` per work unit + `04-findings.md` digest |
+| 5 | `/perf-report [output-dir]` | `results/*.json` | `perf-report.md` / `perf-report.html` — same renderer and structure as the one-shot path |
+
+All artifacts for a target live in one reusable workspace,
+`analysis-runs/<target-name>/`, under the directory where you invoke the commands.
+Rules of the workflow:
+
+- **Stages run in order**; each command checks that its input artifact exists and
+  otherwise names the command to run first.
+- **Any stage can be re-run at any time**; it overwrites its own artifact only, and
+  tells you which downstream artifacts are now out of date — nothing downstream is
+  regenerated without you asking for it.
+- **Hand edits are authoritative**: adjust depths in `02-scope.md` (or fix the
+  component map in `01-architecture.md`) in your editor, then run the next stage.
+- **Components marked `skip` get no work units** and are named as deliberately
+  excluded in the final report; `skim` components get entry-points-only review.
+- Stage 4 checkpoints one JSON per work unit, so an interrupted run can continue with
+  `/perf-exec only-failed`, re-running only missing or failed units.
+
 ## Reports
 
 Both paths write `perf-report.md` and `perf-report.html` to the chosen output directory
@@ -129,7 +160,8 @@ src/
 │   └── templates/       # perf-report.md.j2 / perf-report.html.j2
 └── lib/discovery.py     # language detection and file discovery (both paths)
 
-skills/perf-analyze/SKILL.md   # the /perf-analyze skill (plugin orchestration procedure)
+skills/perf-analyze/SKILL.md   # the one-shot /perf-analyze skill (plugin orchestration procedure)
+skills/perf-{arch,scope,plan,exec,report}/  # the staged workflow, one skill per stage
 scripts/plugin_run.py          # stdlib-only plugin bootstrap (venv provisioning + dispatch)
 .claude-plugin/                # plugin.json + marketplace.json manifests
 tests/                         # unit, contract, and integration suites

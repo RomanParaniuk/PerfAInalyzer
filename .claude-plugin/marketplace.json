@@ -7,7 +7,7 @@
     {
       "name": "perf-ai",
       "source": "./",
-      "description": "Static multi-stage performance analysis skill (/perf-analyze) with parallel subagents and deterministic consolidated reports."
+      "description": "Static performance analysis with parallel subagents and deterministic consolidated reports — one-shot (/perf-analyze) or staged one command per stage (/perf-arch, /perf-scope, /perf-plan, /perf-exec, /perf-report) with durable, re-runnable Markdown artifacts."
     }
   ]
 }
