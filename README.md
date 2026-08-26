@@ -112,7 +112,7 @@ split by analysis dimension, one command per unit stage:
 | # | Command | Reads | Writes |
 |---|---------|-------|--------|
 | 1 | `/perf-arch [path]` | the codebase | `01-architecture.md` — components, entry points, sizes, perf relevance |
-| 2 | `/perf-scope [accept]` | `01-architecture.md` | `02-scope.md` — review depth per component (deep / standard / skim / skip), confirmed by you |
+| 2 | `/perf-scope [accept]` | `01-architecture.md` | `02-scope.md` — review depth per component (deep / standard / skim / skip), confirmed by you; product code only, with tests, tooling, generated and vendored code skipped by default |
 | 3 | `/perf-plan [max-parallel=N]` | `02-scope.md` | `03-plan.md` + `results/workplan.json` — ordered work units, skipped components excluded, token estimate |
 | 4a | `/perf-exec-structural` | `03-plan.md`, `results/workplan.json` | `results/structural_context--all.json` + `04a-structural.md` — the structural summary shared by 4b–4g |
 | 4b | `/perf-exec-complexity [only-failed]` | `results/workplan.json`, `02-scope.md`, `04a-structural.md` | `results/algorithmic_complexity--*.json` + `04b-complexity.md` digest |
@@ -191,7 +191,9 @@ tests/                         # unit, contract, and integration suites
 Typical change entry points: report wording/format → `src/report/templates/`; stage
 behavior → `src/pipeline/stages/`; aggregation/ordering rules → `src/report/aggregator.py`;
 plugin orchestration → `skills/perf-analyze/SKILL.md`; work partitioning or duplicate
-merging → `src/agentrun/`.
+merging → `src/agentrun/`. The six per-dimension execution skills share one procedure,
+`skills/perf-exec/dimension-procedure.md` — each `skills/perf-exec-*/SKILL.md` holds only
+that dimension's parameter table, so procedure changes are made once in the shared file.
 
 ## Running the tests
 

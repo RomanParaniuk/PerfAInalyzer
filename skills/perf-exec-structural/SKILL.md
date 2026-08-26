@@ -53,8 +53,9 @@ Launch **one** subagent and wait for it. Its prompt must include:
 - The static-analysis-only mandate.
 - The mandate to write `<workspace>/results/structural_context--all.json` in the
   stage-result schema (identical to the other exec stages — see the JSON schema in
-  `${CLAUDE_PLUGIN_ROOT}/skills/perf-exec-complexity/SKILL.md` §2), and to also return
-  a compact (~2–4k token) structural summary of the codebase as its final message.
+  `${CLAUDE_PLUGIN_ROOT}/skills/perf-exec/dimension-procedure.md` §2), and to also
+  return a compact (~2–4k token) structural summary of the codebase as its final
+  message.
 
 If the subagent visibly fails or times out, retry exactly once. If it fails again,
 the unit stays failed: still write the digest below with status `failed`, tell the

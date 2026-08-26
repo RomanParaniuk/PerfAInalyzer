@@ -60,17 +60,26 @@ unit's `files` list here — do **not** save this throwaway plan (the real one i
 
 Read the codebase structure — directory layout, manifests/build files, the discovered
 file list, and selectively the key source files (entry points, routing, main modules).
-Identify 5–15 **components**: meaningful parts (app, package, service, layer, vendored
-code, generated code, tests). For each determine:
+Identify 5–15 product **components**: meaningful parts (app, package, service, layer),
+plus the non-product ones carved out below (tests, generated code, vendored code,
+tooling). For each determine:
 
 - **Paths** — one or more glob patterns relative to the target root that exactly cover
   the component's files (e.g. `apps/portal/src/**`). These globs are consumed
   mechanically by later stages (skip-exclusion, depth mapping), so they must be valid
   and mutually disjoint; every discovered file should fall under exactly one component.
+  **Never mix product and non-product code in one component.** Non-product code — tests,
+  fixtures, mocks, benchmarks, examples and demo apps, build/CI/tooling scripts,
+  generated code, vendored code, docs — gets its own component(s), and so do
+  non-product files co-located with product code (`src/**/*_test.go`,
+  `**/__tests__/**`, `**/*.spec.ts`): carve them out with their own globs and exclude
+  them from the product component's globs. `/perf-scope` skips non-product code by
+  default and can only do so when its globs are separable here.
 - **Entry points** — main files/functions where execution or requests enter.
 - **Size** — approximate file count under its globs.
 - **Performance relevance** — high / medium / low, with a one-line reason (hot paths,
-  I/O surfaces, algorithmic cores vs. config, generated code, tests).
+  I/O surfaces, algorithmic cores vs. config, generated code, tests). Say "non-product"
+  in the reason for the carved-out components, so the depth survey can act on it.
 
 For large codebases you may fan the reading out to a few parallel subagents (one per
 top-level area), each returning component candidates; merge their answers yourself.

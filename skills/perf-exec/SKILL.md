@@ -40,17 +40,15 @@ profile the submitted code. Never read or prompt for `ANTHROPIC_API_KEY`.
    valid `results/structural_context--all.json` instead of re-running it, deriving
    the shared summary from `04a-structural.md` or the JSON. If the structural unit
    ends failed, **stop** after writing its digest — 4b–4g cannot run without it.
-3. Run stages 4b–4g in order: follow the procedures in
-   `${CLAUDE_PLUGIN_ROOT}/skills/perf-exec-complexity/SKILL.md`,
-   `${CLAUDE_PLUGIN_ROOT}/skills/perf-exec-resource-io/SKILL.md`,
-   `${CLAUDE_PLUGIN_ROOT}/skills/perf-exec-concurrency/SKILL.md`,
-   `${CLAUDE_PLUGIN_ROOT}/skills/perf-exec-memory/SKILL.md`,
-   `${CLAUDE_PLUGIN_ROOT}/skills/perf-exec-data-access/SKILL.md`, and
-   `${CLAUDE_PLUGIN_ROOT}/skills/perf-exec-startup/SKILL.md` (again skipping
-   the repeated workspace/staleness checks), passing `only-failed` through to each.
-   Every scheduling guarantee in those skills holds unchanged — waves of at most N,
-   one retry pass, failed units recorded, never aborting the run. A failed
-   dimension never blocks the remaining dimensions.
+3. Run stages 4b–4g in order. All six share one procedure,
+   `${CLAUDE_PLUGIN_ROOT}/skills/perf-exec/dimension-procedure.md`; each dimension's
+   skill (`${CLAUDE_PLUGIN_ROOT}/skills/perf-exec-<name>/SKILL.md`) holds only its
+   parameter table (stage key, units, instructions file, digest). Read the shared
+   procedure once, then execute it per dimension with that dimension's parameters
+   (again skipping the repeated workspace/staleness checks), passing `only-failed`
+   through to each. Every scheduling guarantee in the shared procedure holds
+   unchanged — waves of at most N, one retry pass, failed units recorded, never
+   aborting the run. A failed dimension never blocks the remaining dimensions.
 4. Report to the user, per dimension: units completed / failed / reused and where
    its digest was written — then the overall severity totals, that
    `/perf-exec-verify` can optionally re-check the critical/high issues before
