@@ -30,7 +30,7 @@ is identical.
 ### Hosted-API CLI (developer checkout)
 
 ```bash
-git clone <this-repository-url> Perf-AI
+git clone https://github.com/RomanParaniuk/PerfAInalyzer.git Perf-AI
 cd Perf-AI
 python3 -m venv .venv
 source .venv/bin/activate
@@ -43,7 +43,7 @@ The repository doubles as the plugin and as its own single-plugin marketplace. I
 Claude Code session in **any** project:
 
 ```text
-/plugin marketplace add <github-owner>/<repo>
+/plugin marketplace add RomanParaniuk/PerfAInalyzer
 /plugin install perf-ai@perf-ai
 ```
 
