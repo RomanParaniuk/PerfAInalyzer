@@ -1,8 +1,9 @@
 """Contract tests (T006): the work-plan JSON shape per data-model.md "Work Plan".
 
 All fields present; partitions pairwise disjoint and jointly covering every discovered
-file; units ordered structural-first then stage-major x partition-index;
-P = clamp(ceil(max_parallel / 3), 1, file_count); identical inputs -> identical plan."""
+file; units ordered structural-first, then stage-major x partition-index, then the
+whole-scope dependency unit; P = clamp(ceil(max_parallel / 3), 1, file_count); identical
+inputs -> identical plan."""
 
 from __future__ import annotations
 
@@ -10,19 +11,34 @@ import json
 import math
 from pathlib import Path
 
-from src.agentrun.workplan import build_work_plan, compute_partition_count, plan_to_json
-from src.lib.discovery import discover_files
+from src.agentrun.workplan import (
+    WHOLE_SCOPE_STAGES,
+    build_work_plan,
+    compute_partition_count,
+    plan_to_json,
+)
+from src.lib.discovery import discover_files, discover_manifests
 from src.models.stage import STAGE_ORDER, StageName
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 ANTI_PATTERN_FIXTURE = FIXTURES_DIR / "anti_pattern_sample"
+DEPENDENCY_FIXTURE = FIXTURES_DIR / "dependency_sample"
 
-ANALYSIS_STAGES = [s for s in STAGE_ORDER if s is not StageName.STRUCTURAL_CONTEXT]
+ANALYSIS_STAGES = [s for s in STAGE_ORDER if s not in WHOLE_SCOPE_STAGES]
 
 
 def _plan(max_parallel: int = 4):
     files = discover_files(ANTI_PATTERN_FIXTURE)
     return build_work_plan(ANTI_PATTERN_FIXTURE, files, max_parallel=max_parallel)
+
+
+def _dependency_plan(max_parallel: int = 4):
+    return build_work_plan(
+        DEPENDENCY_FIXTURE,
+        discover_files(DEPENDENCY_FIXTURE),
+        max_parallel=max_parallel,
+        manifests=discover_manifests(DEPENDENCY_FIXTURE),
+    )
 
 
 class TestWorkPlanFields:
@@ -35,6 +51,7 @@ class TestWorkPlanFields:
             "max_parallel",
             "partitions",
             "units",
+            "manifests",
         }
         assert data["detected_languages"] == ["javascript", "python"]
         assert data["file_count"] == 3  # orders.py, pricing.py, search.js
@@ -70,6 +87,22 @@ class TestUnitOrdering:
             for partition in plan.partitions
         ]
         assert [u.unit_id for u in plan.units[1:]] == expected_rest
+
+    def test_dependency_unit_is_whole_scope_and_last(self):
+        plan = _dependency_plan(max_parallel=4)
+        dependency = plan.units[-1]
+        assert dependency.unit_id == "dependency_footprint--all"
+        assert dependency.stage is StageName.DEPENDENCY_FOOTPRINT
+        assert dependency.partition_id == "all"
+        assert dependency.files == ["package.json"] == plan.manifests
+        # Manifests are dependency input, never code scope: they are not partitioned.
+        assert not any("package.json" in p.files for p in plan.partitions)
+        assert plan.file_count == 1  # app.js only
+
+    def test_no_dependency_unit_without_manifests(self):
+        plan = _plan(max_parallel=4)
+        assert plan.manifests == []
+        assert all(u.stage is not StageName.DEPENDENCY_FOOTPRINT for u in plan.units)
 
 
 class TestPartitionCountFormula:

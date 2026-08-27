@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 
-from src.lib.discovery import SourceFile
+from src.lib.discovery import ManifestFile, SourceFile, discover_manifests
 from src.models.stage import StageName
 
 logger = logging.getLogger("perf_ai.context")
@@ -43,6 +43,7 @@ DEFAULT_STAGE_INPUT_BUDGETS: dict[StageName, int] = {
     StageName.MEMORY_ALLOCATION: 40_000,
     StageName.DATA_ACCESS_EFFICIENCY: 40_000,
     StageName.STARTUP_INITIALIZATION: 40_000,
+    StageName.DEPENDENCY_FOOTPRINT: 30_000,
 }
 
 assert DEFAULT_STAGE_INPUT_BUDGETS[StageName.STRUCTURAL_CONTEXT] < HAIKU_CONTEXT_WINDOW_TOKENS
@@ -74,6 +75,7 @@ class FileIndex:
 class StructuralIndex:
     root: Path
     files: list[FileIndex] = field(default_factory=list)
+    manifests: list[ManifestFile] = field(default_factory=list)
 
     def all_chunks(self) -> list[CodeChunk]:
         return [chunk for f in self.files for chunk in f.chunks]
@@ -297,8 +299,21 @@ def index_file(file: SourceFile) -> FileIndex:
     )
 
 
-def build_structural_index(root: Path, files: Sequence[SourceFile]) -> StructuralIndex:
-    return StructuralIndex(root=root, files=[index_file(f) for f in files])
+def build_structural_index(
+    root: Path,
+    files: Sequence[SourceFile],
+    manifests: Sequence[ManifestFile] | None = None,
+) -> StructuralIndex:
+    """Index the code scope, and collect the dependency manifests alongside it.
+
+    `manifests=None` discovers them from `root`; pass an explicit sequence when the
+    caller already applied scope globs the discovery here would not know about.
+    """
+    return StructuralIndex(
+        root=root,
+        files=[index_file(f) for f in files],
+        manifests=list(discover_manifests(root) if manifests is None else manifests),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -364,6 +379,7 @@ _STAGE_PATTERNS: dict[StageName, list[tuple[re.Pattern[str], float]]] = {
         (re.compile(r"\b(?:import_module|__import__|require)\("), 1.5),
     ],
     StageName.STRUCTURAL_CONTEXT: [],  # handled by _structural_score
+    StageName.DEPENDENCY_FOOTPRINT: [],  # handled by build_dependency_input
 }
 
 _ENTRYPOINT_NAME_RE = re.compile(r"(?:^|/)(?:main|app|index|cli|server|__init__|__main__)\.\w+$")
@@ -467,6 +483,164 @@ def build_shared_context(
     return "\n".join(parts)
 
 
+# ---------------------------------------------------------------------------
+# Dependency-footprint input (manifests + import tally, both computed locally)
+# ---------------------------------------------------------------------------
+
+# A manifest this large is already pathological; inlining it would crowd out the rest.
+MAX_INLINE_MANIFEST_BYTES = 20_000
+
+_QUOTED_MODULE_RE = re.compile(r"""['"]([^'"\s]+)['"]""")
+_ANGLE_MODULE_RE = re.compile(r"<([^>\s]+)>")
+_PY_FROM_RE = re.compile(r"^from\s+([.\w]+)")
+_BARE_IMPORT_RE = re.compile(r"^(?:import|use|using|require)\s+(?:static\s+)?([\w.:]+)")
+
+
+def import_targets(statement: str) -> list[str]:
+    """Raw module strings referenced by one import statement, across language syntaxes."""
+    text = statement.strip()
+    quoted = _QUOTED_MODULE_RE.findall(text) + _ANGLE_MODULE_RE.findall(text)
+    if quoted:  # JS/TS, Go, Swift, C/C++ — the module is always the quoted part
+        return quoted
+    from_match = _PY_FROM_RE.match(text)
+    if from_match:
+        return [from_match.group(1)]
+    if text.startswith("import ") and " from " not in text:
+        # `import a, b as c` (Python) / `import java.util.List;` (Java)
+        body = text[len("import ") :].split(";")[0]
+        return [part.strip().split(" as ")[0].strip() for part in body.split(",") if part.strip()]
+    bare = _BARE_IMPORT_RE.match(text)
+    return [bare.group(1)] if bare else []
+
+
+def top_level_package(raw: str) -> str | None:
+    """The installable package a raw import target belongs to, or None if it is internal.
+
+    Heuristic by necessity — relative paths, path aliases, and same-repo modules are
+    dropped; scoped npm names keep two segments and module-path style names (a domain in
+    the first segment) keep three, which is where the package boundary sits in practice.
+    """
+    target = raw.strip().strip("'\"").rstrip(";")
+    if not target or target.startswith((".", "/", "~", "#", "@/", "@@")):
+        return None
+    if "::" in target:  # Rust
+        return target.split("::", 1)[0]
+    if "/" in target:
+        segments = target.split("/")
+        if target.startswith("@"):  # @scope/name/deep -> @scope/name
+            return "/".join(segments[:2])
+        if "." in segments[0]:  # github.com/org/repo/pkg -> github.com/org/repo
+            return "/".join(segments[:3])
+        return segments[0]
+    if "." in target:  # os.path -> os; java.util.List -> java
+        return target.split(".", 1)[0]
+    return target
+
+
+def internal_module_names(index: StructuralIndex) -> set[str]:
+    """Top-level names that resolve inside the scope — the project's own modules.
+
+    An import of one of these is not a dependency, however absolute it looks.
+    """
+    names: set[str] = set()
+    for file_index in index.files:
+        head, _, tail = file_index.file.rel_path.partition("/")
+        names.add(head if tail else Path(head).stem)
+    return names
+
+
+def dependency_usage(index: StructuralIndex) -> list[tuple[str, int]]:
+    """Externally-importable package → number of scope files importing it, most first.
+
+    The project's own modules are excluded: this is the dependency side of the import
+    graph, not the whole of it.
+    """
+    internal = internal_module_names(index)
+    counts: dict[str, set[str]] = {}
+    for file_index in index.files:
+        for statement in file_index.imports:
+            for raw in import_targets(statement):
+                package = top_level_package(raw)
+                if package and package not in internal:
+                    counts.setdefault(package, set()).add(file_index.file.rel_path)
+    return sorted(((name, len(files)) for name, files in counts.items()), key=lambda p: (-p[1], p[0]))
+
+
+def build_dependency_input(
+    index: StructuralIndex, *, token_budget: int
+) -> tuple[str, str | None]:
+    """Assemble the dependency stage's input: manifest contents plus the import tally.
+
+    Lockfiles are listed but never inlined — their size is the signal, their contents are
+    megabytes of noise. Returns the input text and a coverage note for what was left out.
+    """
+    if not index.manifests:
+        return (
+            "(no dependency manifests were found in this scope)",
+            "No dependency manifest (package.json, pyproject.toml, go.mod, …) was found, "
+            "so declared dependencies could not be checked — only imported modules.",
+        )
+
+    parts: list[str] = ["# Dependency manifests", ""]
+    remaining = token_budget - estimate_tokens("\n".join(parts))
+    omitted: list[str] = []
+    lockfiles: list[str] = []
+
+    for manifest in index.manifests:
+        label = f"{manifest.ecosystem}{', lockfile' if manifest.is_lockfile else ''}"
+        header = f"## {manifest.rel_path} ({label}, {manifest.size_bytes:,} bytes)"
+        if manifest.is_lockfile:
+            lockfiles.append(f"- {manifest.rel_path} ({label}, {manifest.size_bytes:,} bytes)")
+            continue
+        if manifest.size_bytes > MAX_INLINE_MANIFEST_BYTES:
+            omitted.append(f"{manifest.rel_path} (too large to inline)")
+            continue
+        try:
+            text = manifest.path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            logger.warning("could not read manifest %s: %s", manifest.rel_path, exc)
+            omitted.append(f"{manifest.rel_path} (unreadable)")
+            continue
+        entry = f"{header}\n```\n{text}\n```\n"
+        cost = estimate_tokens(entry)
+        if cost > remaining:
+            omitted.append(f"{manifest.rel_path} (token budget)")
+            continue
+        parts.append(entry)
+        remaining -= cost
+
+    if lockfiles:
+        parts.append(
+            "# Lockfiles present (contents deliberately not included; size is the signal)\n"
+        )
+        parts.extend(lockfiles)
+        parts.append("")
+
+    usage = dependency_usage(index)
+    parts.append(
+        "# Imported modules in this scope, the project's own modules excluded "
+        "(module → files importing it)\n"
+    )
+    if usage:
+        included = 0
+        for name, count in usage:
+            line = f"- {name}: {count}"
+            cost = estimate_tokens(line)
+            if cost > remaining:
+                omitted.append(f"{len(usage) - included} lower-use imported modules")
+                break
+            parts.append(line)
+            remaining -= cost
+            included += 1
+    else:
+        parts.append("(no external imports were detected in the indexed files)")
+
+    note = (
+        f"Dependency stage input omitted: {', '.join(omitted)}." if omitted else None
+    )
+    return "\n".join(parts) + "\n", note
+
+
 def _format_excerpt(chunk: CodeChunk) -> str:
     symbol = f" {chunk.symbol}" if chunk.symbol else ""
     flag = " [best-effort chunk: no grammar for this language]" if chunk.best_effort else ""
@@ -490,6 +664,18 @@ def assemble_context(
         budget = min(budget, HAIKU_CONTEXT_WINDOW_TOKENS // 2)
 
     remaining = budget - estimate_tokens(shared_context)
+
+    if stage is StageName.DEPENDENCY_FOOTPRINT:
+        # Declared dependencies and import sites, not ranked code chunks.
+        dependency_input, dependency_note = build_dependency_input(
+            index, token_budget=remaining
+        )
+        return ContextBundle(
+            shared_context=shared_context,
+            stage_excerpts=dependency_input,
+            coverage_note=dependency_note,
+        )
+
     ranked = rank_chunks(index, stage)
     relevant = [(score, chunk) for score, chunk in ranked if score > 0]
 

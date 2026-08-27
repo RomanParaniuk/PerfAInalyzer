@@ -19,7 +19,7 @@ from pathlib import Path
 from time import monotonic
 from typing import Protocol
 
-from src.lib.discovery import SourceFile, detect_languages
+from src.lib.discovery import ManifestFile, SourceFile, detect_languages
 from src.models.finding import Finding
 from src.models.report import AnalysisRun, RunStatus
 from src.models.stage import (
@@ -197,6 +197,7 @@ def run_pipeline(
     root: Path,
     files: Sequence[SourceFile],
     provider: StageProvider,
+    manifests: Sequence[ManifestFile] | None = None,
     stage_specs: dict[StageName, StageSpec] | None = None,
     config: PipelineConfig | None = None,
     on_progress: ProgressCallback | None = None,
@@ -216,7 +217,7 @@ def run_pipeline(
     def remaining() -> float:
         return max(1.0, deadline - monotonic())
 
-    index = build_structural_index(root, files)
+    index = build_structural_index(root, files, manifests)
     limitations = _index_limitations(index)
     coverage_notes: list[str] = []
 

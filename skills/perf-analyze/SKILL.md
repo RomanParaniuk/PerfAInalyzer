@@ -1,6 +1,6 @@
 ---
 name: perf-analyze
-description: Run a seven-stage static performance analysis of a codebase using parallel subagents and produce perf-report.md / perf-report.html. Use when the user asks to analyze performance, find performance issues or bottlenecks, or run perf-ai on a path. Invoked as /perf-analyze [path] [max-parallel=N]. Uses the invoking agent's own model access — never an API key.
+description: Run an eight-stage static performance analysis of a codebase using parallel subagents and produce perf-report.md / perf-report.html. Use when the user asks to analyze performance, find performance issues or bottlenecks, or run perf-ai on a path. Invoked as /perf-analyze [path] [max-parallel=N]. Uses the invoking agent's own model access — never an API key.
 ---
 
 # perf-analyze — agent-path performance analysis
@@ -18,7 +18,7 @@ point — use `/perf-arch` → `/perf-scope` → `/perf-plan` → `/perf-exec` �
 `/perf-report` instead (the execution stage also splits into per-dimension commands:
 `/perf-exec-structural`, `/perf-exec-complexity`, `/perf-exec-resource-io`,
 `/perf-exec-concurrency`, `/perf-exec-memory`, `/perf-exec-data-access`,
-`/perf-exec-startup`, plus the optional `/perf-exec-verify`).
+`/perf-exec-startup`, `/perf-exec-deps`, plus the optional `/perf-exec-verify`).
 
 Every deterministic step is invoked as:
 
@@ -106,7 +106,8 @@ prompt must include:
 ## 5. Run the remaining units in waves of at most N
 
 The remaining units (from the work plan, in order) are `<stage>--<partition>` units for
-the six analysis stages. Stage instruction files:
+the six partitioned analysis stages, plus — when the work plan lists manifests — the
+whole-scope `dependency_footprint--all` unit. Stage instruction files:
 
 | Stage | Instructions file |
 |---|---|
@@ -116,9 +117,17 @@ the six analysis stages. Stage instruction files:
 | `memory_allocation` | `${CLAUDE_PLUGIN_ROOT}/src/pipeline/stages/memory.md` |
 | `data_access_efficiency` | `${CLAUDE_PLUGIN_ROOT}/src/pipeline/stages/data_access.md` |
 | `startup_initialization` | `${CLAUDE_PLUGIN_ROOT}/src/pipeline/stages/startup.md` |
+| `dependency_footprint` | `${CLAUDE_PLUGIN_ROOT}/src/pipeline/stages/dependencies.md` |
+
+The `dependency_footprint--all` unit's files are the project's **manifests**, not source
+files. Its subagent additionally gathers the project's own import statements by
+searching the scope, and is forbidden — state this in its prompt — from reading,
+listing, or descending into `node_modules`, `vendor`, `site-packages`, or any other
+installed-dependency directory, and from inlining lockfile contents. It schedules like
+any other unit in the waves below.
 
 Each stage file is frontmatter plus an instruction body; the frontmatter's `system`
-key names the shared system-prompt file — for all six stages that is
+key names the shared system-prompt file — for all seven stages that is
 `${CLAUDE_PLUGIN_ROOT}/src/pipeline/stages/system-sonnet.md`. Subagents follow the
 system prompt's rules together with their stage's instruction body.
 

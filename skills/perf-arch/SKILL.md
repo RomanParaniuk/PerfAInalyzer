@@ -24,10 +24,11 @@ artifact that the next stage consumes:
 | 4e. Memory & allocation execution | `/perf-exec-memory [only-failed]` | `results/<unit>.json` + `04e-memory.md` |
 | 4f. Data-access execution | `/perf-exec-data-access [only-failed]` | `results/<unit>.json` + `04f-data-access.md` |
 | 4g. Startup & initialization execution | `/perf-exec-startup [only-failed]` | `results/<unit>.json` + `04g-startup.md` |
-| 4h. Verification (optional) | `/perf-exec-verify` | `results/verification.json` + `04h-verify.md` |
+| 4h. Dependency-footprint execution | `/perf-exec-deps` | `results/dependency_footprint--all.json` + `04h-dependencies.md` |
+| 4i. Verification (optional) | `/perf-exec-verify` | `results/verification.json` + `04i-verify.md` |
 | 5. Report finalization | `/perf-report [output-dir]` | `perf-report.md` / `perf-report.html` |
 
-(`/perf-exec [only-failed]` is the umbrella that runs 4a–4g in order.)
+(`/perf-exec [only-failed]` is the umbrella that runs 4a–4h in order.)
 
 ## 1. Resolve target and workspace
 

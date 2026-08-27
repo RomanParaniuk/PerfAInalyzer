@@ -1,9 +1,9 @@
 ---
 name: perf-exec-verify
-description: "Stage 4h (optional) of the staged perf-ai workflow: adversarial verification of high-severity findings. Reads every execution stage's results/<unit>.json, re-examines each critical/high issue with an independent refuter subagent (waves of at most N), and writes results/verification.json plus the 04h-verify.md digest. /perf-report automatically drops the refuted issues when verification.json is present. Invoked as /perf-exec-verify. Re-running overwrites both artifacts."
+description: "Stage 4i (optional) of the staged perf-ai workflow: adversarial verification of high-severity findings. Reads every execution stage's results/<unit>.json, re-examines each critical/high issue with an independent refuter subagent (waves of at most N), and writes results/verification.json plus the 04i-verify.md digest. /perf-report automatically drops the refuted issues when verification.json is present. Invoked as /perf-exec-verify. Re-running overwrites both artifacts."
 ---
 
-# perf-exec-verify — stage 4h: adversarial verification (optional)
+# perf-exec-verify — stage 4i: adversarial verification (optional)
 
 You re-examine every **critical or high issue** the execution stages reported, one
 independent skeptic subagent per finding, and record which findings survive.
@@ -11,7 +11,7 @@ independent skeptic subagent per finding, and record which findings survive.
 profile the submitted code. Never read or prompt for `ANTHROPIC_API_KEY`.
 
 This stage is optional and runs after any or all of the per-dimension stages
-(4b–4g). Its output is an overlay: `/perf-report`'s renderer detects
+(4b–4h). Its output is an overlay: `/perf-report`'s renderer detects
 `results/verification.json` automatically, drops the refuted issues from the final
 report, and records the outcome in the report's limitations section. A missing or
 deleted `verification.json` simply means the report keeps every finding.
@@ -24,8 +24,9 @@ several → ask (non-interactive: stop with instructions); none → stop.
 **Preconditions** (stop naming the command to run first if unmet):
 
 - `results/workplan.json` exists → otherwise `/perf-plan`.
-- At least one per-dimension result file (`results/<stage>--p*.json`, stages 4b–4g)
-  exists and parses → otherwise `/perf-exec` (or a per-dimension command).
+- At least one per-dimension result file exists and parses — `results/<stage>--p*.json`
+  for the partitioned stages 4b–4g, or `results/dependency_footprint--all.json` for
+  stage 4h → otherwise `/perf-exec` (or a per-dimension command).
 
 Read the target path and N (`max_parallel`) from `workplan.json`. Collect the
 verification queue: every finding across all existing, parsable
@@ -41,7 +42,7 @@ If some execution stages have no result files yet, proceed, but list them in the
 digest and your final message: their future findings will be unverified until this
 command is re-run.
 
-Re-run behavior: overwrite `results/verification.json` and `04h-verify.md`. If any
+Re-run behavior: overwrite `results/verification.json` and `04i-verify.md`. If any
 execution stage re-ran after the last verification, its findings changed — that is
 exactly when a re-run of this command is needed.
 
@@ -101,7 +102,7 @@ present), and `description` **exactly** as they appear in the unit result files:
 ```
 
 Unverified findings (failed verifier) get **no** entry. Then overwrite
-`04h-verify.md`:
+`04i-verify.md`:
 
 ```markdown
 ---

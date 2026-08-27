@@ -18,7 +18,7 @@ several → ask (non-interactive: stop with instructions); none → stop.
 at least one `results/<unit>.json` exists → otherwise stop, run `/perf-exec` (or the
 per-dimension `/perf-exec-*` commands). Take the target path from `workplan.json`'s
 `scope_path`. If some dimensions have result files and others have none, say which
-execution stages (4a–4g) are missing entirely — render anyway, but never present the
+execution stages (4a–4h) are missing entirely — render anyway, but never present the
 report as full coverage. If `results/verification.json` exists (written by
 `/perf-exec-verify`), the renderer consumes it automatically: refuted issues are
 dropped and the outcome lands in the report's limitations section — no extra flag.

@@ -17,7 +17,7 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
-from src.lib.discovery import detect_languages, discover_files
+from src.lib.discovery import detect_languages, discover_files, discover_manifests
 from src.models.stage import STAGE_LABELS, StageName, StageStatus
 from src.pipeline.orchestrator import PipelineConfig, run_pipeline
 from src.providers.anthropic_client import AnthropicProvider, ProviderAuthError
@@ -121,6 +121,7 @@ def analyze(
         outcome = run_pipeline(
             root=path.resolve(),
             files=files,
+            manifests=discover_manifests(path, exclude=exclude or ()),
             provider=provider,
             config=PipelineConfig(timeout_minutes=timeout_minutes),
             on_progress=_progress_printer,

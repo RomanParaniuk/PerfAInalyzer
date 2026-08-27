@@ -1,6 +1,6 @@
 ---
 name: perf-exec-structural
-description: "Stage 4a of the staged perf-ai workflow: structural-context execution. Reads 03-plan.md and results/workplan.json, runs the structural_context--all unit with one subagent, writes results/structural_context--all.json plus 04a-structural.md — whose structural summary is the shared context for every per-dimension execution stage (4b–4g). Invoked as /perf-exec-structural. Re-running overwrites both artifacts."
+description: "Stage 4a of the staged perf-ai workflow: structural-context execution. Reads 03-plan.md and results/workplan.json, runs the structural_context--all unit with one subagent, writes results/structural_context--all.json plus 04a-structural.md — whose structural summary is the shared context for every per-dimension execution stage (4b–4h). Invoked as /perf-exec-structural. Re-running overwrites both artifacts."
 ---
 
 # perf-exec-structural — stage 4a: structural-context execution
@@ -21,10 +21,11 @@ The execution stage is split by analysis dimension, one command per unit stage:
 | 4e | `/perf-exec-memory` | `memory_allocation--p*` | `04e-memory.md` |
 | 4f | `/perf-exec-data-access` | `data_access_efficiency--p*` | `04f-data-access.md` |
 | 4g | `/perf-exec-startup` | `startup_initialization--p*` | `04g-startup.md` |
+| 4h | `/perf-exec-deps` | `dependency_footprint--all` | `04h-dependencies.md` |
 
-(Stage 4h, `/perf-exec-verify`, optionally re-checks the critical/high issues after
-4b–4g.) This stage must run **first**: 4b–4g refuse to start without its result.
-`/perf-exec` runs 4a–4g in order.
+(Stage 4i, `/perf-exec-verify`, optionally re-checks the critical/high issues after
+4b–4h.) This stage must run **first**: 4b–4h refuse to start without its result.
+`/perf-exec` runs 4a–4h in order.
 
 ## 1. Resolve the workspace and inputs
 
@@ -38,7 +39,7 @@ or `03-plan.md` is newer than `workplan.json`, warn that the plan may be stale a
 suggest `/perf-plan` first — continue only if the user says so (non-interactive: stop).
 
 Re-run behavior: if `results/structural_context--all.json` or `04a-structural.md`
-already exists, overwrite both, and note afterwards that the 4b–4g results and digests,
+already exists, overwrite both, and note afterwards that the 4b–4h results and digests,
 and any reports, were built against the old structural context and should be
 regenerated with their commands. Never delete other stages' result files.
 
@@ -59,12 +60,12 @@ Launch **one** subagent and wait for it. Its prompt must include:
 
 If the subagent visibly fails or times out, retry exactly once. If it fails again,
 the unit stays failed: still write the digest below with status `failed`, tell the
-user, and stop — 4b–4g cannot run without a structural result.
+user, and stop — 4b–4h cannot run without a structural result.
 
 ## 3. Write `04a-structural.md`
 
 Overwrite the digest. Its `## Structural summary` section is a durable artifact, not
-just documentation — stages 4b–4g read it as their shared context:
+just documentation — stages 4b–4h read it as their shared context:
 
 ```markdown
 ---
@@ -95,7 +96,8 @@ remaining execution stages>
 
 Run the per-dimension stages — `/perf-exec-complexity`, `/perf-exec-resource-io`,
 `/perf-exec-concurrency`, `/perf-exec-memory`, `/perf-exec-data-access`,
-`/perf-exec-startup` (any order, or all via `/perf-exec only-failed`) — then
+`/perf-exec-startup`, `/perf-exec-deps` (any order, or all via
+`/perf-exec only-failed`) — then
 optionally `/perf-exec-verify`, then `/perf-report`.
 ```
 
@@ -103,4 +105,4 @@ optionally `/perf-exec-verify`, then `/perf-report`.
 
 Tell the user: unit status, the finding count, where the result JSON and the digest
 were written, the staleness notice if this was a re-run, and that the next commands
-are the per-dimension stages 4b–4g (individually or via `/perf-exec only-failed`).
+are the per-dimension stages 4b–4h (individually or via `/perf-exec only-failed`).

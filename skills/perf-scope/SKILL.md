@@ -59,6 +59,11 @@ The developer can override any of this in the next step: non-product code is ski
 default, not by rule (a slow test suite or build script is a legitimate target if they
 ask for it).
 
+Dependency manifests (`package.json`, `pyproject.toml`, `go.mod`, …) are not source
+files and do not belong in this table — the deterministic scan picks them up separately
+for the dependency-footprint stage. They drop out only when a `skip` component's globs
+happen to cover them, so skipping a subproject also skips its declared dependencies.
+
 ## 3. Confirm with the developer
 
 Never choose the scope silently:

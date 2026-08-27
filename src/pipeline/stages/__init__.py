@@ -28,6 +28,7 @@ STAGE_FILES: dict[StageName, str] = {
     StageName.MEMORY_ALLOCATION: "memory.md",
     StageName.DATA_ACCESS_EFFICIENCY: "data_access.md",
     StageName.STARTUP_INITIALIZATION: "startup.md",
+    StageName.DEPENDENCY_FOOTPRINT: "dependencies.md",
 }
 
 

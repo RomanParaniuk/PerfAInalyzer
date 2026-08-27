@@ -55,6 +55,14 @@
       "partition_id": "p1",
       "files": ["orders.py", "pricing.py"],
       "result_file": "startup_initialization--p1.json"
+    },
+    {
+      "unit_id": "dependency_footprint--all",
+      "stage": "dependency_footprint",
+      "partition_id": "all",
+      "files": ["pyproject.toml"],
+      "result_file": "dependency_footprint--all.json"
     }
-  ]
+  ],
+  "manifests": ["pyproject.toml"]
 }

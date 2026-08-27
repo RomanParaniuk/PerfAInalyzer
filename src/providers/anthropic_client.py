@@ -31,6 +31,7 @@ STAGE_MODELS: dict[StageName, str] = {
     StageName.MEMORY_ALLOCATION: "claude-sonnet-5",
     StageName.DATA_ACCESS_EFFICIENCY: "claude-sonnet-5",
     StageName.STARTUP_INITIALIZATION: "claude-sonnet-5",
+    StageName.DEPENDENCY_FOOTPRINT: "claude-sonnet-5",
 }
 
 TOOL_NAME = "report_stage_findings"

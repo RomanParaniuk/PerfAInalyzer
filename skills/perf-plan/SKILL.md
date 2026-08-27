@@ -1,6 +1,6 @@
 ---
 name: perf-plan
-description: "Stage 3 of the staged perf-ai workflow: analysis plan. Reads the confirmed 02-scope.md, builds the deterministic work plan (excluding skipped components), and writes 03-plan.md plus results/workplan.json — the inputs for /perf-exec. Use after /perf-scope, or to rebuild the plan after editing the scope. Invoked as /perf-plan [max-parallel=N]. Re-running overwrites the previous plan."
+description: "Stage 3 of the staged perf-ai workflow: analysis plan. Reads the confirmed 02-scope.md, builds the deterministic work plan (excluding skipped components, adding the whole-scope dependency unit when the project declares dependencies), and writes 03-plan.md plus results/workplan.json — the inputs for /perf-exec. Use after /perf-scope, or to rebuild the plan after editing the scope. Invoked as /perf-plan [max-parallel=N]. Re-running overwrites the previous plan."
 ---
 
 # perf-plan — stage 3: analysis plan
@@ -49,9 +49,15 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/plugin_run.py" agent scope <target> \
 
 On non-zero exit, stop and relay its problem-and-fix message (if *everything* was
 excluded it reports "no source code … found" — say the scope skips too much and point
-at `02-scope.md`). On success, stdout is the work-plan JSON: `partitions` and ordered
-`units` (`unit_id`, `stage`, `files`, `result_file`). Create `<workspace>/results/` and
-save it there as `workplan.json` (overwriting any previous one).
+at `02-scope.md`). On success, stdout is the work-plan JSON: `partitions`, ordered
+`units` (`unit_id`, `stage`, `files`, `result_file`), and `manifests` — the dependency
+manifests found outside the code scope. Create `<workspace>/results/` and save it there
+as `workplan.json` (overwriting any previous one).
+
+Two units are whole-scope rather than partitioned: `structural_context--all`, and
+`dependency_footprint--all` over the manifests. The dependency unit is absent when the
+scope declares no dependencies at all (or the excludes covered every manifest) — that
+is normal, and stage 4h then has nothing to run.
 
 ## 4. Write `03-plan.md`
 
@@ -80,19 +86,21 @@ files it contains, each with its depth>
 - Included: <file count> files in <partition count> partition(s), N=<max_parallel>.
 - Work units by depth: <counts of units touching deep / standard / skim components>
 - Skipped components (no work units): <names, or "none">
+- Dependency manifests: <count and names, or "none found — stage 4h will not run">
 
 ## Estimated cost
 
 ~<low>–<high> tokens for the analysis stage (input estimate: total included bytes / 4
-chars-per-token × 7 stage passes, halved for skim-dominated units; plus output). Stated
-so the actual spend can be compared after `/perf-exec`.
+chars-per-token × 7 stage passes over the code, halved for skim-dominated units, plus
+the dependency unit's manifest bytes / 4; plus output). Stated so the actual spend can
+be compared after `/perf-exec`.
 
 ## Next stage
 
-Run `/perf-exec` to execute all seven analysis dimensions, or go dimension by
+Run `/perf-exec` to execute all eight analysis dimensions, or go dimension by
 dimension: `/perf-exec-structural`, then `/perf-exec-complexity`,
 `/perf-exec-resource-io`, `/perf-exec-concurrency`, `/perf-exec-memory`,
-`/perf-exec-data-access`, `/perf-exec-startup` — then optionally
+`/perf-exec-data-access`, `/perf-exec-startup`, `/perf-exec-deps` — then optionally
 `/perf-exec-verify`. Machine-readable plan:
 `results/workplan.json` (regenerate with `/perf-plan` rather than editing it by hand).
 ```
@@ -100,6 +108,7 @@ dimension: `/perf-exec-structural`, then `/perf-exec-complexity`,
 ## 5. Report to the user
 
 Tell the user: where the artifacts were written, the unit count and partition count,
-which components are skipped, the token estimate, the cap notice if it applied, the
-staleness notice if this was a re-run, and that the next command is `/perf-exec`
+which components are skipped, whether a dependency unit was planned, the token estimate,
+the cap notice if it applied, the staleness notice if this was a re-run, and that the
+next command is `/perf-exec`
 (or `/perf-exec-structural` to execute one dimension at a time).

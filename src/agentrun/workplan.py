@@ -2,8 +2,9 @@
 
 Deterministic and zero-token: partition count is `P = clamp(ceil(N / 3), 1, file_count)`,
 files are assigned by greedy size-balanced bin-packing (largest file first into the
-currently smallest bin), and units are ordered structural-first then stage-major x
-partition-index — identical inputs always produce an identical plan."""
+currently smallest bin), and units are ordered structural-first, then stage-major x
+partition-index, then the whole-scope dependency unit — identical inputs always produce
+an identical plan."""
 
 from __future__ import annotations
 
@@ -13,18 +14,25 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from src.lib.discovery import SourceFile, detect_languages
+from src.lib.discovery import ManifestFile, SourceFile, detect_languages
 from src.models.stage import STAGE_ORDER, StageName
 
 MAX_PARALLEL_MIN = 1
 MAX_PARALLEL_MAX = 10
 
 STRUCTURAL_UNIT_ID = "structural_context--all"
+DEPENDENCY_UNIT_ID = "dependency_footprint--all"
 
-# The per-partition analysis stages; structural context is always one whole-scope
-# unit whose summary the later units share (research.md §4).
+# The two whole-scope stages: structural context is one unit whose summary the later
+# units share (research.md §4), and the dependency footprint is one unit over the
+# manifests — neither is partitioned, because splitting either destroys its subject.
+WHOLE_SCOPE_STAGES: frozenset[StageName] = frozenset(
+    {StageName.STRUCTURAL_CONTEXT, StageName.DEPENDENCY_FOOTPRINT}
+)
+
+# The per-partition analysis stages.
 ANALYSIS_STAGES: tuple[StageName, ...] = tuple(
-    stage for stage in STAGE_ORDER if stage is not StageName.STRUCTURAL_CONTEXT
+    stage for stage in STAGE_ORDER if stage not in WHOLE_SCOPE_STAGES
 )
 
 
@@ -55,6 +63,7 @@ class WorkPlan(BaseModel):
     max_parallel: int
     partitions: list[Partition]
     units: list[WorkUnit]
+    manifests: list[str] = []  # dependency manifests/lockfiles; not part of the code scope
 
 
 def compute_partition_count(max_parallel: int, file_count: int) -> int:
@@ -81,9 +90,13 @@ def _partition_files(files: Sequence[SourceFile], count: int) -> list[Partition]
 
 
 def build_work_plan(
-    root: Path, files: Sequence[SourceFile], max_parallel: int
+    root: Path,
+    files: Sequence[SourceFile],
+    max_parallel: int,
+    manifests: Sequence[ManifestFile] = (),
 ) -> WorkPlan:
-    """Build the full work plan: 1 structural unit + one unit per (stage x partition)."""
+    """Build the full work plan: 1 structural unit, one unit per (stage x partition), and
+    — when the scope declares dependencies at all — 1 whole-scope dependency unit."""
     partitions = _partition_files(
         files, compute_partition_count(max_parallel, len(files))
     )
@@ -108,6 +121,17 @@ def build_work_plan(
                     result_file=f"{unit_id}.json",
                 )
             )
+    manifest_paths = [m.rel_path for m in manifests]
+    if manifest_paths:
+        units.append(
+            WorkUnit(
+                unit_id=DEPENDENCY_UNIT_ID,
+                stage=StageName.DEPENDENCY_FOOTPRINT,
+                partition_id="all",
+                files=manifest_paths,
+                result_file=f"{DEPENDENCY_UNIT_ID}.json",
+            )
+        )
     return WorkPlan(
         scope_path=str(root.resolve()),
         detected_languages=detect_languages(files),
@@ -115,6 +139,7 @@ def build_work_plan(
         max_parallel=max_parallel,
         partitions=partitions,
         units=units,
+        manifests=manifest_paths,
     )
 
 

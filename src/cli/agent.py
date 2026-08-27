@@ -36,7 +36,7 @@ from src.agentrun.workplan import (
     build_work_plan,
     plan_to_json,
 )
-from src.lib.discovery import discover_files
+from src.lib.discovery import discover_files, discover_manifests
 from src.models.report import AnalysisRun, RunStatus
 from src.models.stage import StageStatus
 from src.report.aggregator import aggregate
@@ -122,7 +122,8 @@ def scope(
             1,
         )
 
-    plan = build_work_plan(path, files, max_parallel=limit)
+    manifests = discover_manifests(path, exclude=exclude or ())
+    plan = build_work_plan(path, files, max_parallel=limit, manifests=manifests)
     typer.echo(plan_to_json(plan))
 
 
@@ -173,6 +174,13 @@ def render(
     # Dedup between per-stage union and aggregation (FR-011): duplicates from
     # parallel same-stage subagents collapse to one location-keyed survivor.
     stages, coverage_notes = build_stages(outcomes, dedupe=dedupe_findings)
+    if not plan.manifests:
+        # No manifest, no dependency unit — say so rather than omitting the stage silently.
+        coverage_notes.append(
+            "dependency_footprint stage: no dependency manifest (package.json, "
+            "pyproject.toml, go.mod, …) was found in the scope, so declared "
+            "dependencies were not analyzed."
+        )
 
     # Optional stage-4h overlay: refuted issues are dropped, the outcome is a
     # limitations note; a missing or unusable file never blocks the render.

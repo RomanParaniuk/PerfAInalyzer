@@ -1,12 +1,12 @@
 ---
 name: perf-exec
-description: "Stage 4 of the staged perf-ai workflow: analysis execution, umbrella over the seven per-dimension execution stages. Runs /perf-exec-structural, then /perf-exec-complexity, /perf-exec-resource-io, /perf-exec-concurrency, /perf-exec-memory, /perf-exec-data-access, and /perf-exec-startup in order — each writes its results/<unit>.json files and its own 04a–04g digest. Invoked as /perf-exec [only-failed]. Default re-run redoes every unit of every dimension; only-failed redoes just missing/failed ones."
+description: "Stage 4 of the staged perf-ai workflow: analysis execution, umbrella over the eight per-dimension execution stages. Runs /perf-exec-structural, then /perf-exec-complexity, /perf-exec-resource-io, /perf-exec-concurrency, /perf-exec-memory, /perf-exec-data-access, /perf-exec-startup, and /perf-exec-deps in order — each writes its results/<unit>.json files and its own 04a–04h digest. Invoked as /perf-exec [only-failed]. Default re-run redoes every unit of every dimension; only-failed redoes just missing/failed ones."
 ---
 
 # perf-exec — stage 4: analysis execution (umbrella)
 
 The execution stage is **split by analysis dimension**, one command per unit stage.
-This command is the umbrella: it runs all seven in order. Run the sub-commands
+This command is the umbrella: it runs all eight in order. Run the sub-commands
 directly instead when you want to execute, inspect, or re-run one dimension at a time.
 
 | Stage | Command | Units | Digest |
@@ -18,9 +18,10 @@ directly instead when you want to execute, inspect, or re-run one dimension at a
 | 4e | `/perf-exec-memory` | `memory_allocation--p*` | `04e-memory.md` |
 | 4f | `/perf-exec-data-access` | `data_access_efficiency--p*` | `04f-data-access.md` |
 | 4g | `/perf-exec-startup` | `startup_initialization--p*` | `04g-startup.md` |
+| 4h | `/perf-exec-deps` | `dependency_footprint--all` | `04h-dependencies.md` |
 
-There is also an **optional** stage 4h, `/perf-exec-verify`, which adversarially
-re-checks the critical/high issues found by 4b–4g; this umbrella does **not** run it
+There is also an **optional** stage 4i, `/perf-exec-verify`, which adversarially
+re-checks the critical/high issues found by 4b–4h; this umbrella does **not** run it
 automatically — invoke it separately after execution when you want verified findings.
 
 **Static analysis only** — neither you nor any subagent may execute, compile, or
@@ -39,7 +40,7 @@ profile the submitted code. Never read or prompt for `ANTHROPIC_API_KEY`.
    already-done workspace/staleness checks). With `only-failed`, reuse an existing
    valid `results/structural_context--all.json` instead of re-running it, deriving
    the shared summary from `04a-structural.md` or the JSON. If the structural unit
-   ends failed, **stop** after writing its digest — 4b–4g cannot run without it.
+   ends failed, **stop** after writing its digest — 4b–4h cannot run without it.
 3. Run stages 4b–4g in order. All six share one procedure,
    `${CLAUDE_PLUGIN_ROOT}/skills/perf-exec/dimension-procedure.md`; each dimension's
    skill (`${CLAUDE_PLUGIN_ROOT}/skills/perf-exec-<name>/SKILL.md`) holds only its
@@ -49,7 +50,13 @@ profile the submitted code. Never read or prompt for `ANTHROPIC_API_KEY`.
    through to each. Every scheduling guarantee in the shared procedure holds
    unchanged — waves of at most N, one retry pass, failed units recorded, never
    aborting the run. A failed dimension never blocks the remaining dimensions.
-4. Report to the user, per dimension: units completed / failed / reused and where
+4. Run stage 4h last: follow
+   `${CLAUDE_PLUGIN_ROOT}/skills/perf-exec-deps/SKILL.md` (again skipping the
+   already-done workspace/staleness checks). It is one whole-scope unit rather than a
+   partitioned dimension, so it does not use the shared procedure; with `only-failed`,
+   reuse an existing valid `results/dependency_footprint--all.json`. A plan with no
+   manifests makes this stage not-applicable, not failed — record that and move on.
+5. Report to the user, per dimension: units completed / failed / reused and where
    its digest was written — then the overall severity totals, that
    `/perf-exec-verify` can optionally re-check the critical/high issues before
    reporting, and that the next command is `/perf-report [output-dir]`.

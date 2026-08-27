@@ -13,12 +13,15 @@ There are two independent ways to run an analysis:
 | **Hosted-API CLI** | `perf-ai analyze` | `ANTHROPIC_API_KEY` required | Your terminal |
 | **Claude Code plugin** | `/perf-analyze` | **None** — uses the agent's own model access | A Claude Code session |
 
-The seven analysis stages are the same on both paths: structural/context analysis
+The eight analysis stages are the same on both paths: structural/context analysis
 first, then algorithmic complexity, resource & I/O efficiency, concurrency &
-scalability, memory & allocation, data access & query efficiency, and startup &
-initialization. Both paths render reports through the same deterministic templates,
-so their output structure is identical. (The staged plugin workflow adds an optional
-adversarial-verification pass on top — see below.)
+scalability, memory & allocation, data access & query efficiency, startup &
+initialization, and dependency footprint — the last one judging what the project
+declares and imports (overlapping libraries, unused dependencies, heavy imports on
+entry paths) without ever reading a dependency's own source. Both paths render reports
+through the same deterministic templates, so their output structure is identical. (The
+staged plugin workflow adds an optional adversarial-verification pass on top — see
+below.)
 
 ## Prerequisites
 
@@ -114,22 +117,25 @@ split by analysis dimension, one command per unit stage:
 | 1 | `/perf-arch [path]` | the codebase | `01-architecture.md` — components, entry points, sizes, perf relevance |
 | 2 | `/perf-scope [accept]` | `01-architecture.md` | `02-scope.md` — review depth per component (deep / standard / skim / skip), confirmed by you; product code only, with tests, tooling, generated and vendored code skipped by default |
 | 3 | `/perf-plan [max-parallel=N]` | `02-scope.md` | `03-plan.md` + `results/workplan.json` — ordered work units, skipped components excluded, token estimate |
-| 4a | `/perf-exec-structural` | `03-plan.md`, `results/workplan.json` | `results/structural_context--all.json` + `04a-structural.md` — the structural summary shared by 4b–4g |
+| 4a | `/perf-exec-structural` | `03-plan.md`, `results/workplan.json` | `results/structural_context--all.json` + `04a-structural.md` — the structural summary shared by 4b–4h |
 | 4b | `/perf-exec-complexity [only-failed]` | `results/workplan.json`, `02-scope.md`, `04a-structural.md` | `results/algorithmic_complexity--*.json` + `04b-complexity.md` digest |
 | 4c | `/perf-exec-resource-io [only-failed]` | `results/workplan.json`, `02-scope.md`, `04a-structural.md` | `results/resource_io_efficiency--*.json` + `04c-resource-io.md` digest |
 | 4d | `/perf-exec-concurrency [only-failed]` | `results/workplan.json`, `02-scope.md`, `04a-structural.md` | `results/concurrency_scalability--*.json` + `04d-concurrency.md` digest |
 | 4e | `/perf-exec-memory [only-failed]` | `results/workplan.json`, `02-scope.md`, `04a-structural.md` | `results/memory_allocation--*.json` + `04e-memory.md` digest |
 | 4f | `/perf-exec-data-access [only-failed]` | `results/workplan.json`, `02-scope.md`, `04a-structural.md` | `results/data_access_efficiency--*.json` + `04f-data-access.md` digest |
 | 4g | `/perf-exec-startup [only-failed]` | `results/workplan.json`, `02-scope.md`, `04a-structural.md` | `results/startup_initialization--*.json` + `04g-startup.md` digest |
-| 4h | `/perf-exec-verify` *(optional)* | every `results/<stage>--*.json` | `results/verification.json` + `04h-verify.md` — adversarial re-check of critical/high issues |
+| 4h | `/perf-exec-deps` | `results/workplan.json`, `02-scope.md`, `04a-structural.md` | `results/dependency_footprint--all.json` + `04h-dependencies.md` digest — manifests and import sites, one whole-scope unit |
+| 4i | `/perf-exec-verify` *(optional)* | every `results/<stage>--*.json` | `results/verification.json` + `04i-verify.md` — adversarial re-check of critical/high issues |
 | 5 | `/perf-report [output-dir]` | `results/*.json` | `perf-report.md` / `perf-report.html` — same renderer and structure as the one-shot path |
 
-`/perf-exec [only-failed]` is the umbrella over stage 4: it runs 4a–4g in order
-(the optional 4h verification pass is invoked separately). Stage 4a must run first
-(its structural summary is the shared context); 4b–4g can then run in any order,
-individually or together. When `results/verification.json` exists, `/perf-report`
-automatically drops the issues the verification refuted and notes the outcome in
-the report's limitations section; delete the file to render without the overlay.
+`/perf-exec [only-failed]` is the umbrella over stage 4: it runs 4a–4h in order
+(the optional 4i verification pass is invoked separately). Stage 4a must run first
+(its structural summary is the shared context); 4b–4h can then run in any order,
+individually or together. Stage 4h is skipped when the project declares no dependencies
+at all — the report says so rather than omitting the subject. When
+`results/verification.json` exists, `/perf-report` automatically drops the issues the
+verification refuted and notes the outcome in the report's limitations section; delete
+the file to render without the overlay.
 
 All artifacts for a target live in one reusable workspace,
 `analysis-runs/<target-name>/`, under the directory where you invoke the commands.
@@ -170,7 +176,7 @@ contains:
 src/
 ├── cli/main.py          # `perf-ai` CLI: the `analyze` command (hosted path)
 ├── cli/agent.py         # `perf-ai agent scope|render`: deterministic helpers for the plugin path
-├── pipeline/            # hosted-path orchestrator and the seven stage definitions
+├── pipeline/            # hosted-path orchestrator and the eight stage definitions
 │   └── stages/          # stage definitions as markdown: frontmatter + instructions
 │                        # (both paths read these; system-*.md hold the system prompts)
 ├── agentrun/            # plugin-path support: work-plan partitioning, result
@@ -179,7 +185,8 @@ src/
 ├── models/              # Pydantic models: findings, stages, report, action items
 ├── report/              # aggregator + Jinja2 templates — change report rendering here
 │   └── templates/       # perf-report.md.j2 / perf-report.html.j2
-└── lib/discovery.py     # language detection and file discovery (both paths)
+└── lib/discovery.py     # language detection, file discovery, and dependency-manifest
+                         # discovery (both paths)
 
 skills/perf-analyze/SKILL.md   # the one-shot /perf-analyze skill (plugin orchestration procedure)
 skills/perf-{arch,scope,plan,exec,exec-*,report}/  # the staged workflow: one skill per stage, one per execution dimension (plus the optional exec-verify pass)

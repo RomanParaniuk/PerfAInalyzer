@@ -1,4 +1,4 @@
-# Shared procedure for the per-dimension execution stages (4b–4g)
+# Shared procedure for the partitioned per-dimension execution stages (4b–4g)
 
 This is the single procedure behind `/perf-exec-complexity`, `/perf-exec-resource-io`,
 `/perf-exec-concurrency`, `/perf-exec-memory`, `/perf-exec-data-access`, and
@@ -8,7 +8,8 @@ This is the single procedure behind `/perf-exec-complexity`, `/perf-exec-resourc
 `<Instructions file>`, `<Digest file>`, `<Digest stage value>`, or `<Digest title>`,
 substitute the invoking skill's value. The stages may run in any order relative to
 each other once `/perf-exec-structural` has run; `/perf-exec` runs all of them in
-sequence.
+sequence. Stage 4h (`/perf-exec-deps`) is **not** one of them: it is a single
+whole-scope unit over the project's manifests and has its own skill.
 
 **Static analysis only** — neither you nor any subagent may execute, compile, or
 profile the submitted code. Never read or prompt for `ANTHROPIC_API_KEY`.
@@ -127,12 +128,12 @@ units_completed: <n>/<total of this stage's units>
 
 ## Next stage
 
-Run any remaining execution stages (4b–4g, see `/perf-exec`) if not done yet, then
+Run any remaining execution stages (4b–4h, see `/perf-exec`) if not done yet, then
 optionally `/perf-exec-verify`, then `/perf-report [output-dir]`.
 ```
 
 ## 4. Report to the user
 
 Tell the user: units completed / failed / reused, the severity totals, where the
-digest and result files were written, and which execution stages (4a–4g) still lack
+digest and result files were written, and which execution stages (4a–4h) still lack
 results before `/perf-report`.
